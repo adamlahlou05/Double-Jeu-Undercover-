@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.DoubleJeu" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/cobalt</item>
+        <item name="android:colorAccent">#FFD23F</item>
+        <item name="android:forceDarkAllowed">false</item>
+        <item name="android:windowSplashScreenBackground">@color/cobalt</item>
+    </style>
+</resources>
