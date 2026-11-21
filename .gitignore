@@ -1,0 +1,19 @@
+node_modules/
+dist/
+tests/e2e/shots/
+
+# Android
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/.idea/
+*.iml
+.kotlin/
+
+# Clés de signature : jamais dans le dépôt
+*.jks
+*.keystore
+keystore.properties
+
+.DS_Store
