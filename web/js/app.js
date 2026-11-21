@@ -430,8 +430,13 @@ function exportData() {
   const text = exportPayload(DB);
   const name = `double-jeu-${new Date().toISOString().slice(0, 10)}.json`;
   if (native && native.exportFile) { native.exportFile(name, text); return; }
-  if (window.DJ_NO_DOWNLOAD && navigator.clipboard) {
-    navigator.clipboard.writeText(text).then(() => toast('Sauvegarde copiée : colle-la dans une note pour la garder.'), () => toast('Copie impossible dans ce navigateur.'));
+  if (window.DJ_NO_DOWNLOAD) {
+    // Page hébergée là où les téléchargements sont interdits : la sauvegarde passe par le presse-papiers.
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(() => toast('Sauvegarde copiée : colle-la dans une note pour la garder.'), () => toast('Copie impossible ici. L’export fonctionne dans l’application Android.'));
+    } else {
+      toast('Export indisponible ici. Il fonctionne dans l’application Android.');
+    }
     return;
   }
   try {
