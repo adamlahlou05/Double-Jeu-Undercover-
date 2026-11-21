@@ -1,5 +1,6 @@
 package io.github.adamlahlou05.doublejeu;
 
+import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.res.Configuration;
@@ -13,6 +14,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.webkit.JavascriptInterface;
+import android.webkit.RenderProcessGoneDetail;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
@@ -57,6 +59,7 @@ public final class MainActivity extends ComponentActivity {
     private FrameLayout root;
     private WebView web;
     private Storage storage;
+    private int barColor = COBALT;
 
     @Nullable private ValueCallback<Uri[]> fileCallback;
     @Nullable private Uri cameraUri;
@@ -75,11 +78,7 @@ public final class MainActivity extends ComponentActivity {
         storage = new Storage(getFilesDir());
 
         root = new FrameLayout(this);
-        root.setBackgroundColor(COBALT);
-        web = new WebView(this);
-        web.setBackgroundColor(COBALT);
-        web.setOverScrollMode(View.OVER_SCROLL_NEVER);
-        root.addView(web, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        root.setBackgroundColor(barColor);
         setContentView(root);
 
         // La page ne passe jamais sous la barre d'état, la barre de navigation, l'encoche ou le clavier.
@@ -92,7 +91,7 @@ public final class MainActivity extends ComponentActivity {
         });
 
         registerLaunchers();
-        configureWebView();
+        createWebView();
 
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override
@@ -105,7 +104,6 @@ public final class MainActivity extends ComponentActivity {
             }
         });
 
-        web.loadUrl(START_URL);
     }
 
     private void registerLaunchers() {
@@ -117,7 +115,14 @@ public final class MainActivity extends ComponentActivity {
                 this::writeExport);
     }
 
-    private void configureWebView() {
+    /** Crée la WebView, la configure et charge le jeu. Sert aussi à repartir après l'arrêt du moteur de rendu. */
+    @SuppressLint("SetJavaScriptEnabled") // Seules les pages embarquées dans l'APK sont chargées, jamais de contenu distant.
+    private void createWebView() {
+        web = new WebView(this);
+        web.setBackgroundColor(barColor);
+        web.setOverScrollMode(View.OVER_SCROLL_NEVER);
+        root.addView(web, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+
         WebSettings settings = web.getSettings();
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
@@ -148,6 +153,20 @@ public final class MainActivity extends ComponentActivity {
                 // Seules les pages embarquées sont autorisées : toute autre navigation est ignorée.
                 return !HOST.equals(request.getUrl().getHost());
             }
+
+            @Override
+            public boolean onRenderProcessGone(WebView view, RenderProcessGoneDetail detail) {
+                // Android a arrêté le moteur de rendu (mémoire reprise pendant que l'appli était en arrière-plan,
+                // ou plantage). Sans cette reprise, toute l'application serait fermée. On reconstruit la page :
+                // la partie étant sauvegardée à chaque étape, on la retrouve depuis l'accueil.
+                if (view == web) {
+                    finishFileChooser(null);
+                    root.removeView(view);
+                    view.destroy();
+                    createWebView();
+                }
+                return true;
+            }
         });
 
         web.setWebChromeClient(new WebChromeClient() {
@@ -173,6 +192,7 @@ public final class MainActivity extends ComponentActivity {
         });
 
         web.addJavascriptInterface(new Bridge(), "DJNative");
+        web.loadUrl(START_URL);
     }
 
     /** Ouvre l'appareil photo du téléphone ; renvoie false s'il n'y en a pas. */
@@ -275,6 +295,7 @@ public final class MainActivity extends ComponentActivity {
                 return;
             }
             runOnUiThread(() -> {
+                barColor = parsed;
                 root.setBackgroundColor(parsed);
                 web.setBackgroundColor(parsed);
             });

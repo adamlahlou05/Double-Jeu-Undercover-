@@ -48,7 +48,9 @@ android {
     sourceSets["main"].assets.srcDir(layout.buildDirectory.dir("generated/webAssets"))
 
     lint {
-        disable += setOf("DiscouragedApi", "SourceLockedOrientationActivity")
+        // Portrait imposé : un téléphone qu'on se passe de main en main ne doit pas pivoter.
+        // Versions : volontairement figées sur un ensemble testé ; à faire évoluer ensemble.
+        disable += setOf("LockedOrientationActivity", "GradleDependency", "AndroidGradlePluginVersion")
     }
 }
 
