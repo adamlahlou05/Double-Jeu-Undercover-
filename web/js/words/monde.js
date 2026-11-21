@@ -53,14 +53,12 @@ Mosquée|Synagogue
 Musée|Galerie d'art
 Zoo|Aquarium
 Carte routière|Globe terrestre
-Nord|Sud
 #2
 Suède|Norvège
 Danemark|Finlande
 Irlande|Islande
 Pologne|Hongrie
 Croatie|Monténégro
-Pays-Bas|Flandre
 Monaco|Andorre
 Vatican|Saint-Marin
 Sénégal|Côte d'Ivoire
@@ -169,7 +167,6 @@ Latitude|Longitude
 Roi|Empereur
 Reine|Princesse
 Chevalier|Samouraï
-Château fort|Forteresse
 Épée|Lance
 Arc|Arbalète
 Pirate|Viking
@@ -218,7 +215,6 @@ Mai 68|Front populaire
 Monarchie|République
 Empire|Royaume
 Dictature|Démocratie
-Colonie|Conquête
 Révolution industrielle|Conquête spatiale
 Premier pas sur la Lune|Spoutnik
 Machine à vapeur|Imprimerie
@@ -227,7 +223,6 @@ Papyrus|Tablette d'argile
 Vitrail|Gargouille
 Troubadour|Bouffon du roi
 Mousquetaire|Hussard
-Corsaire|Flibustier
 Templier|Croisé
 Druide|Chaman
 Oracle|Prophète
@@ -273,7 +268,6 @@ Bagnard|Galérien
 Néandertal|Cro-Magnon
 Lascaux|Grotte Chauvet
 Menhir|Dolmen
-Ère glaciaire|Big Bang
 Guerre de Troie|Guerres puniques
 Ligne Maginot|Mur de l'Atlantique
 `,
@@ -290,7 +284,6 @@ Conte|Fable
 Poème|Haïku
 Journal|Radio
 Peinture|Dessin
-Sculpture|Statue
 Tableau|Affiche
 Pièce de théâtre|Spectacle de rue
 Cirque|Fête foraine
@@ -305,7 +298,7 @@ Espagnol|Italien
 Alphabet|Chiffres
 Voyelle|Consonne
 Verbe|Adjectif
-Majuscule|Accent
+Majuscule|Italique
 Encyclopédie|Atlas
 La Joconde|La Vénus de Milo
 Les Misérables|Notre-Dame de Paris
@@ -320,7 +313,6 @@ Hôpital|Clinique
 Médiathèque|Ludothèque
 #2
 Impressionnisme|Cubisme
-Street art|Graffiti
 Aquarelle|Peinture à l'huile
 Fresque|Mosaïque
 Origami|Calligraphie
@@ -355,7 +347,6 @@ Point-virgule|Deux-points
 Passé simple|Imparfait
 Subjonctif|Conditionnel
 Tutoiement|Vouvoiement
-Bise|Poignée de main
 Bal des pompiers|Feu d'artifice
 Chandeleur|Mardi gras
 Épiphanie|Toussaint
@@ -435,7 +426,7 @@ Vétérinaire|Dresseur
 Pharmacien|Opticien
 Avocat (métier)|Juge
 Journaliste|Présentateur télé
-Acteur|Comédien
+Acteur|Figurant
 Chanteur|Musicien
 Photographe|Caméraman
 Secrétaire|Standardiste
@@ -457,7 +448,6 @@ Ingénieur|Technicien
 Développeur|Webdesigner
 Notaire|Huissier
 Détective privé|Inspecteur de police
-Agent secret|Espion
 Douanier|Contrôleur SNCF
 Gendarme|CRS
 Militaire|Légionnaire
@@ -496,7 +486,7 @@ Archéologue|Paléontologue
 Astronome|Météorologue
 Biologiste|Chimiste
 Maire|Député
-Ambassadeur|Diplomate
+Ambassadeur|Consul
 Croque-mort|Fossoyeur
 #3
 Sommelier|Œnologue
@@ -513,9 +503,7 @@ Greffier|Clerc de notaire
 Commissaire-priseur|Antiquaire
 Cartographe|Topographe
 Actuaire|Statisticien
-Sourcier|Rebouteux
 Crieur public|Garde champêtre
-Allumeur de réverbères|Ramasseur de balles
 Scaphandrier|Cordiste
 Dompteur|Fauconnier
 Testeur de jeux vidéo|Testeur de matelas

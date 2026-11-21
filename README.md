@@ -7,18 +7,27 @@ on débat, on vote, et on recommence jusqu’à la victoire d’un camp.
 
 Application Android, entièrement hors ligne : aucune permission réseau, aucune publicité, aucune donnée envoyée.
 
+Une seule autorisation peut être demandée, et seulement si on s’en sert : l’**appareil photo**, pour prendre
+une photo de profil depuis l’application. La photo est enregistrée dans le profil du joueur, sur le téléphone,
+et n’en sort jamais (l’application n’a pas accès à Internet). Le micro n’est pas demandé. En cas de refus,
+tout fonctionne quand même : les joueurs gardent leur personnage.
+
 ## Ce qu’il y a dedans
 
 - **3 à 16 joueurs**, avec une composition conseillée selon le nombre et réglable à la main.
 - **Trois modes** : Classique, Éclair (un seul vote) et Mystère (nombre d’infiltrés secret).
 - **Deux façons de voter** : à main levée, ou en secret sur le téléphone avec dépouillement automatique.
   Égalité : départage entre ex æquo, puis tirage au sort.
-- **2 231 paires de mots** dans 19 thèmes et 3 niveaux, sans répétition tant que la sélection n’est pas épuisée,
-  plus vos propres paires (« Nos mots »).
-- **Profils** avec couleur, déguisement ou photo ; **scores**, classement général et de la soirée,
+- **2 229 paires de mots** dans 20 thèmes et 3 niveaux, sans répétition tant que la sélection n’est pas épuisée,
+  plus vos propres paires (« Nos mots »). Un thème « Électricité & électronique » de 100 paires, du disjoncteur
+  au régulateur PID.
+- **Tour de parole sur un seul écran** : l’ordre complet du tour (Mr. White ne parle jamais en premier)
+  et un bouton « Passer au vote ». Rien à valider joueur par joueur.
+- **Profils** avec couleur, personnage (25 au choix) ou photo prise dans l’appli ; **scores**, classement général et de la soirée,
   statistiques par joueur et par rôle, **historique** détaillé de chaque partie.
 - **Parties sauvegardées à chaque étape** : appli fermée par erreur, on reprend où on en était.
-- Options : chrono du débat, prise de notes des indices (répétitions refusées), thème clair ou sombre,
+- Options : chrono du débat (lancé à la demande), prise de notes des indices en touchant un joueur
+  (sans ordre imposé, répétitions refusées), thème clair ou sombre,
   sons, vibrations, export et import d’une sauvegarde.
 
 ## Installer sur un téléphone
@@ -39,7 +48,7 @@ web/                  le jeu : HTML, CSS, JavaScript sans dépendance ni étape 
   js/store.js         sauvegarde locale (fichiers natifs sur Android, localStorage dans un navigateur)
   js/views*.js        écrans ; js/app.js : gestes, navigation, enchaînement des phases
 android/              coque Android : WebView servie localement, sauvegarde sur fichiers, bouton retour,
-                      photo de profil, vibrations, écran maintenu allumé
+                      autorisation de l’appareil photo, vibrations, écran maintenu allumé
 tests/unit/           moteur de jeu et tirage des mots (Node)
 tests/e2e/            parties complètes jouées dans Chromium à la taille d’un téléphone (Playwright)
 scripts/              serveur local, contrôle des mots, page autonome, essai sur émulateur
@@ -103,6 +112,8 @@ et `DJ_KEY_PASSWORD`. Le fichier de clés ne doit jamais être ajouté au dépô
 - Mr. White ne parle jamais en premier. Le premier orateur de chaque tour est tiré au sort parmi les
   autres joueurs (et non « le suivant », ce qui trahirait Mr. White), sans redonner la main à quelqu’un
   qui a déjà ouvert un tour.
+- Si celui qui ouvre le tour quitte la table avant qu’un indice soit noté, l’ordre est retiré au sort
+  (dans tous les cas, pour que le changement d’ordre ne désigne personne).
 - Les Civils gagnent quand tous les infiltrés sont éliminés ; les infiltrés quand il ne reste qu’un Civil ;
   Mr. White seul s’il devine le mot des Civils au moment de son élimination.
 - Points : Civil 2, Mr. White 6, Undercover 10. Tout le camp vainqueur marque, éliminés compris.

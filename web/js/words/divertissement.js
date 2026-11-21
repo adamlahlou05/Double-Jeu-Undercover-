@@ -12,7 +12,6 @@ Héros|Méchant
 Bande-annonce|Générique
 Comédie|Drame
 Film d'horreur|Thriller
-Dessin animé|Film d'animation
 Harry Potter|Le Seigneur des anneaux
 Star Wars|Star Trek
 Marvel|DC Comics
@@ -114,7 +113,7 @@ Caméo|Figurant
 Doublage|Sous-titres
 Cliffhanger|Spoiler
 Scène post-générique|Bêtisier
-Palme d'or|César du meilleur film
+Palme d'or|César
 Citizen Kane|Autant en emporte le vent
 Psychose|Les Oiseaux
 Les Tontons flingueurs|Le Corniaud
@@ -163,7 +162,6 @@ Tube de l'été|Chanson de Noël
 Ukulélé|Banjo
 Harpe|Lyre
 Orgue|Clavecin
-Cornemuse|Biniou
 Triangle|Cymbales
 Xylophone|Maracas
 Contrebasse|Alto
@@ -221,12 +219,9 @@ Shakira|Jennifer Lopez
 David Guetta|DJ Snake
 Bigflo et Oli|Kendji Girac
 #3
-Thérémine|Ondes Martenot
 Didgeridoo|Cor des Alpes
-Vielle à roue|Luth
 Balalaïka|Mandoline
 Kora|Sitar
-Glockenspiel|Carillon
 A cappella|Beatbox
 Requiem|Symphonie
 Sonate|Concerto
@@ -234,7 +229,6 @@ Adagio|Allegro
 Gamme|Accord
 Bossa nova|Samba
 Gospel|Chant grégorien
-Yodel|Chant diphonique
 Autotune|Play-back
 Face B|Titre caché
 Disque d'or|Victoire de la musique
@@ -327,12 +321,10 @@ Usain Bolt|Carl Lewis
 Mohamed Ali|Mike Tyson
 Pelé|Maradona
 Ayrton Senna|Michael Schumacher
-Arsène Lupin|Rouletabille
+Arsène Lupin|Fantômas
 Don Quichotte|Sancho Panza
 Capitaine Flam|Ulysse 31
 Olive et Tom|Jeanne et Serge
-Bécassine|Mafalda
-Jacques Cousteau|Paul-Émile Victor
 Alfred Hitchcock|Stanley Kubrick
 Audrey Hepburn|Grace Kelly
 Jean-Paul Belmondo|Alain Delon
@@ -380,7 +372,6 @@ Penalty|Coup franc
 Stade|Gymnase
 Piscine|Patinoire
 Médaille d'or|Coupe
-Champion|Vainqueur
 Équipe|Club
 Maillot|Short
 Entraînement|Échauffement
@@ -435,7 +426,6 @@ K.-O.|Abandon
 Prolongations|Tirs au but
 Mi-temps|Temps mort
 Remplaçant|Capitaine
-Mercato|Transfert
 Dopage|Tricherie
 Supporter|Ultra
 Ola|Hymne national
@@ -494,7 +484,6 @@ Cuisine|Pâtisserie
 Lecture|Écriture
 Coloriage|Peinture au doigt
 Tricot|Couture
-Brocante|Vide-grenier
 Parc d'attractions|Parc aquatique
 Disneyland|Parc Astérix
 Grande roue|Montagnes russes
@@ -563,20 +552,12 @@ Zapping|Binge-watching
 #3
 Go|Shogi
 Mah-jong|Dominos
-Backgammon|Jacquet
-Awalé|Yams
 Bilboquet|Jokari
-Philatélie|Numismatique
-Généalogie|Héraldique
 Bonsaï|Ikebana
 Apiculture|Permaculture
-Radioamateur|Cibiste
-Tuning|Customisation
 Urbex|Catacombes
 Speedrun|Marathon de jeux
 Fan fiction|Fanzine
-Cruciverbiste|Scrabbleur
-Blitz|Partie simultanée
 Mots mêlés|Rébus
 `,
   },

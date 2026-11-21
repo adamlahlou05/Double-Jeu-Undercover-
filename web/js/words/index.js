@@ -13,7 +13,7 @@ export const LEVELS = [
 ];
 
 const ORDER = ['objets', 'nourriture', 'animaux', 'situations', 'metiers', 'ecole', 'loisirs', 'sport', 'cinema', 'musique',
-  'celebrites', 'geo', 'histoire', 'culture', 'sciences', 'tech', 'expressions', 'abstrait', 'humour'];
+  'celebrites', 'geo', 'histoire', 'culture', 'sciences', 'elec', 'tech', 'expressions', 'abstrait', 'humour'];
 
 function parse(cat) {
   const out = [];

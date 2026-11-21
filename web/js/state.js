@@ -102,12 +102,18 @@ export function invalidateStats() { statsCache = null; nightCache = null; }
 export const activeGame = () => (DB.game && DB.game.phase !== 'end' ? DB.game : null);
 
 const ALL_CATS = CATEGORIES.map((c) => c.id);
+// Thèmes de la version 2.0 : sert à repérer les thèmes ajoutés depuis par une mise à jour.
+const CATS_V20 = ['objets', 'nourriture', 'animaux', 'situations', 'metiers', 'ecole', 'loisirs', 'sport', 'cinema', 'musique',
+  'celebrites', 'geo', 'histoire', 'culture', 'sciences', 'tech', 'expressions', 'abstrait', 'humour'];
 
 /** Réglages proposés pour une nouvelle partie : ceux de la dernière, nettoyés. */
 export function defaultSetup() {
   const last = DB.meta.setup || {};
   const players = (Array.isArray(last.players) ? last.players : []).filter((id) => profileById(id)).slice(0, E.MAX_PLAYERS);
   let cats = Array.isArray(last.cats) ? last.cats.filter((c) => ALL_CATS.includes(c) || c === CUSTOM_CAT.id) : ALL_CATS.slice();
+  // Un thème apparu avec une mise à jour est coché d'office : il ne peut pas avoir été écarté par le joueur.
+  const known = Array.isArray(last.known) ? last.known : CATS_V20;
+  if (Array.isArray(last.cats)) for (const c of ALL_CATS) if (!known.includes(c) && !cats.includes(c)) cats.push(c);
   if (!cats.length) cats = ALL_CATS.slice();
   let levels = Array.isArray(last.levels) ? last.levels.filter((l) => [1, 2, 3].includes(l)) : [1, 2];
   if (!levels.length) levels = [1, 2];

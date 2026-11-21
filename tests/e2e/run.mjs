@@ -880,6 +880,68 @@ async function run(url) {
     check(words.length === 5 && words[0] !== words[1] && words[2] !== words[3], `les deux paires ne tournent pas : ${words.join(',')}`);
   });
 
+  await scenario('mise à jour depuis la 2.0 : profils, scores et partie en cours conservés', async () => {
+    // Données telles que la version 2.0 les a laissées : anciens déguisements, débat en cours, 19 thèmes cochés.
+    const OLD_FACES = ['sourire', 'lunettes', 'moustache', 'chapeau', 'loup', 'cowboy'];
+    const OLD_CATS = ['objets', 'nourriture', 'animaux', 'situations', 'metiers', 'ecole', 'loisirs', 'sport', 'cinema', 'musique', 'celebrites', 'geo', 'histoire', 'culture', 'sciences', 'tech', 'expressions', 'abstrait', 'humour'];
+    const profiles = PEOPLE.slice(0, 6).map(([name], i) => ({ id: 'v' + i, name, color: ['tomate', 'soleil', 'menthe', 'ciel', 'rose', 'lilas'][i], face: OLD_FACES[i], photo: '', createdAt: 1 }));
+    const setupOf = (options) => ({
+      players: profiles.map((q) => ({ id: q.id, name: q.name, color: q.color, face: q.face })), mode: 'classic', undercover: 1, white: 1,
+      pair: { a: 'Café', b: 'Thé', cat: 'nourriture', lvl: 1, key: 'cafe|the' }, options,
+    });
+    const dealAllCards = (g0) => { let g1 = g0; while (g1.phase === 'deal') { g1 = Engine.pickCard(g1, g1.cards.findIndex((c) => c.by < 0)); g1 = Engine.confirmCard(g1); } return g1; };
+    // une partie terminée, pour l'historique et les scores
+    let done = dealAllCards(Engine.createGame(setupOf({ vote: 'open', timer: 0, notes: false })));
+    for (let guard = 0; guard < 8 && done.phase !== 'end'; guard++) {
+      const target = done.players.findIndex((q) => q.alive && q.role !== 'civil');
+      done = Engine.eliminateByShow(Engine.openVote(done), target);
+      if (Engine.awaitingGuess(done)) done = Engine.skipGuess(done);
+      done = Engine.continueAfterReveal(done);
+    }
+    const past = Engine.summarize(done);
+    // une partie en cours, figée comme la 2.0 l'enregistrait pendant le débat
+    const old = JSON.parse(JSON.stringify(dealAllCards(Engine.createGame(setupOf({ vote: 'open', timer: 60, notes: true })))));
+    old.phase = 'debate';
+    old.speakIdx = old.order.length;
+    old.clues = old.order.map((by, k) => ({ round: 1, by, text: 'mot' + k }));
+    const meta = { v: 1, settings: { theme: 'auto', sound: true, haptics: true, motion: true }, used: [], recent: [], custom: [], rulesSeen: true,
+      setup: { players: profiles.map((q) => q.id), mode: 'classic', u: 1, w: 1, auto: true, cats: OLD_CATS, levels: [1, 2], vote: 'open', timer: 60, notes: true } };
+    if (!page.url().startsWith('http')) await page.goto(url);
+    await fresh({ meta, profiles, history: [past], game: old });
+    let d = await db();
+    check(d.profiles.length === 6 && d.profiles.every((q, i) => q.name === profiles[i].name && q.color === profiles[i].color), 'les profils ne sont pas conservés après la mise à jour');
+    check(d.history.length === 1 && d.history[0].id === past.id, 'l’historique n’est pas conservé après la mise à jour');
+    check(await exists(act('resume')), 'la partie en cours de la 2.0 n’est pas proposée à la reprise');
+    await shot('53-maj-accueil');
+    await tap(act('resume'));
+    await settle();
+    let g = await game();
+    check(g.phase === 'clues' && !('speakIdx' in g), `la partie en débat n’est pas reprise au tour de parole (${g.phase})`);
+    check((await page.locator('.screen:not(.leave) .order li').count()) === 6 && (await page.locator('.screen:not(.leave) .cluechip').count()) === 6, 'l’ordre ou les indices notés en 2.0 ne sont pas affichés');
+    check((await text('#timer-txt')).trim() === '1:00', 'le chrono de la partie reprise n’est pas prêt');
+    const broken = await page.evaluate(() => Array.from(document.querySelectorAll('.av use')).filter((u) => !document.querySelector(u.getAttribute('href'))).length);
+    check(broken === 0, `${broken} avatar(s) d’ancien profil sans dessin`);
+    await shot('54-maj-partie-reprise');
+    await eliminateOpen(roleIdx(g, 'civil')[0]);
+    check((await game()).phase === 'reveal', 'la partie reprise ne peut pas continuer');
+    await tap(act('game-menu'));
+    await wait(300);
+    await tap(act('ask-abandon'));
+    await wait(250);
+    await tap(act('do-abandon'));
+    await settle();
+    // scores toujours là, et le nouveau thème est proposé d'office
+    await gotoTab('ranking');
+    check(await exists('.podium'), 'le classement est vide après la mise à jour');
+    await gotoTab('home');
+    await tap(act('new-game'));
+    await settle();
+    const cats = await page.evaluate(() => window.__dj.S.setup.cats.slice());
+    check(cats.includes('elec') && cats.length === 20, `le nouveau thème n’est pas coché d’office (${cats.length} thèmes)`);
+    await tap(act('back'));
+    await settle();
+  });
+
   await scenario('petit écran, 12 joueurs', async () => {
     await page.setViewportSize({ width: 360, height: 640 });
     const profiles = PEOPLE.concat([['Tom', 1, 5], ['Jade', 7, 9], ['Rayan', 10, 18], ['Zoé', 11, 20]]).map(([name, c, f], i) => ({ id: 'q' + i, name, color: ['tomate', 'soleil', 'menthe', 'ciel', 'rose', 'lilas', 'mandarine', 'anis', 'lagon', 'framboise', 'sable', 'ardoise'][c], face: ['sourire', 'lunettes', 'moustache', 'chapeau', 'loup', 'monocle', 'beret', 'casquette', 'couronne', 'noeud', 'casque', 'pirate', 'rondes', 'hautdeforme', 'bonnet', 'chat', 'diable', 'ange', 'clown', 'ninja', 'barbe', 'alien', 'chignon', 'meche', 'couettes', 'cowboy'][f], photo: '', createdAt: 1 }));

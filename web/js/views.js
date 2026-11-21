@@ -220,6 +220,7 @@ export function options() {
   <div class="panel">
     <h3>Chrono du débat</h3>
     <div class="chips">${timers}</div>
+    <p class="hint">${s.timer ? 'Le chrono s’affiche pendant le tour de parole : la table le lance quand le débat commence.' : 'Sans chrono : on vote quand tout le monde a parlé.'}</p>
     <button class="rowbtn switchrow" data-act="toggle-notes" role="switch" aria-checked="${s.notes}"><span class="grow"><b>Noter les indices</b><span>Touche un joueur pour noter son mot : l’appli refuse les répétitions et garde la liste sous les yeux.</span></span><i class="switch${s.notes ? ' on' : ''}"></i></button>
   </div>
 </div>
@@ -468,7 +469,7 @@ export function settings() {
     <button class="rowbtn danger" data-act="ask-reset-scores"${DB.history.length ? '' : ' disabled'}><span class="opt-ic">${icon('trash', 20)}</span><span class="grow"><b>Effacer les scores et l’historique</b><span>Les profils des joueurs sont conservés.</span></span></button>
     <button class="rowbtn danger" data-act="ask-reset-all"><span class="opt-ic">${icon('trash', 20)}</span><span class="grow"><b>Tout effacer</b><span>Joueurs, scores, historique, mots perso et réglages.</span></span></button>
   </div>
-  <p class="foot">Double Jeu ${APP_VERSION}. Tout fonctionne hors ligne${isNative ? ' et tes données restent sur ce téléphone' : ' ; dans un navigateur, les données restent dans celui-ci'}.</p>
+  <p class="foot">Double Jeu ${APP_VERSION}. Tout fonctionne hors ligne${isNative ? ' et tes données restent sur ce téléphone' : ' ; dans un navigateur, les données restent dans celui-ci'}. L’appareil photo ne sert qu’aux photos de profil : elles ne quittent pas l’appareil.</p>
 </div>`;
 }
 

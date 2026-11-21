@@ -331,7 +331,7 @@ function startGame(setup, note) {
   DB.meta.recent = DB.meta.recent.concat([picked.pair.a, picked.pair.b]).slice(-24);
   DB.meta.setup = {
     players: setup.players.slice(), mode: setup.mode, u: setup.u, w: setup.w, auto: setup.auto,
-    cats: setup.cats.slice(), levels: setup.levels.slice(), vote: setup.vote, timer: setup.timer, notes: setup.notes,
+    cats: setup.cats.slice(), known: CATEGORIES.map((c) => c.id), levels: setup.levels.slice(), vote: setup.vote, timer: setup.timer, notes: setup.notes,
   };
   save('meta');
   stopTimers();

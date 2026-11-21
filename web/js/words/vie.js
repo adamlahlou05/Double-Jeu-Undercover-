@@ -1,4 +1,4 @@
-// Bibliothèque de mots — Objets, Situations du quotidien, École & boulot, Tech & numérique.
+// Bibliothèque de mots — Objets, Situations du quotidien, École & boulot, Électricité & électronique, Tech & numérique.
 export default [
   {
     id: 'objets',
@@ -49,8 +49,6 @@ Téléphone|Tablette
 Télévision|Vidéoprojecteur
 Télécommande|Manette
 Casque audio|Écouteurs
-Ampoule|Néon
-Pile|Batterie
 Marteau|Tournevis
 Échelle|Escabeau
 Vélo|Trottinette
@@ -92,7 +90,7 @@ Mètre ruban|Niveau à bulle
 Cadenas à code|Antivol
 Ventilateur|Climatiseur
 Radiateur|Cheminée
-Fer à repasser|Sèche-cheveux
+Sèche-cheveux|Fer à lisser
 Machine à coudre|Métier à tisser
 Aiguille|Épingle
 Bouton|Fermeture éclair
@@ -110,35 +108,29 @@ Tétine|Biberon
 Peluche|Poupée
 Bretelles|Ceinture
 Cerf-volant|Montgolfière
+Moustiquaire|Tapette à mouches
+Rouleau à pâtisserie|Spatule
+Bouillotte|Couverture chauffante
+Gyrophare|Sirène
 #3
-Paravent|Moustiquaire
 Métronome|Diapason
-Sextant|Astrolabe
 Longue-vue|Périscope
 Boomerang|Frisbee
 Yo-yo|Toupie
-Kaléidoscope|Lanterne magique
 Machine à écrire|Minitel
 Tourne-disque|Gramophone
-Polaroïd|Appareil jetable
+Polaroïd|Appareil photo jetable
 Walkman|Baladeur MP3
 Boule à neige|Boîte à musique
 Décapsuleur|Tire-bouchon
 Économe|Râpe à fromage
 Essoreuse à salade|Passoire
-Rouleau à pâtisserie|Maryse
-Chausse-pied|Embauchoir
-Bouillotte|Chaufferette
-Monocle|Lorgnon
 Éventail|Ombrelle
-Gyrophare|Girouette
 Paratonnerre|Antenne râteau
 Épouvantail|Nain de jardin
 Guillotine|Massicot
 Défibrillateur|Stéthoscope
 Sarbacane|Lance-pierre
-Encrier|Buvard
-Chandelier|Bougeoir
 `,
   },
   {
@@ -173,7 +165,7 @@ Passer le permis|Passer le bac
 Déménager|Emménager
 Partir en vacances|Partir en week-end
 Prendre l'avion|Prendre le train
-Faire du covoiturage|Faire de l'autostop
+Faire du covoiturage|Faire de l'auto-stop
 Payer en espèces|Payer par carte
 Regarder un film|Regarder une série
 Lire un livre|Écouter un podcast
@@ -206,7 +198,7 @@ Arrêter de fumer|Arrêter le sucre
 Prendre une bonne résolution|Écrire une liste de choses à faire
 Remettre à demain|Tout faire à la dernière minute
 Passer un entretien|Demander une augmentation
-Poser un congé|Poser un arrêt maladie
+Poser un congé|Se mettre en arrêt maladie
 Faire du télétravail|Faire des heures sup
 Rendre un devoir en retard|Tricher à un contrôle
 Chercher un stage|Chercher un appartement
@@ -263,7 +255,6 @@ Cartable|Trousse
 Tableau noir|Tableau blanc
 Devoirs|Leçons
 Contrôle|Interro surprise
-Bonne note|Mauvaise note
 Bulletin|Carnet de correspondance
 Heure de colle|Punition
 Vacances scolaires|Jour férié
@@ -285,6 +276,7 @@ Pause café|Pause déjeuner
 Chômage|Démission
 Uniforme|Blouse
 Ticket resto|Note de frais
+Concours|Examen
 #2
 Amphi|Salle de TD
 TD|TP
@@ -301,14 +293,14 @@ Antisèche|Copier sur son voisin
 Délégué de classe|Major de promo
 Redoublement|Saut de classe
 Week-end d'intégration|Gala
-BDE|Association étudiante
+BDE|Bureau des sports
 Bourse|Prêt étudiant
 Colocation|Résidence étudiante
 Resto U|Cafétéria
 Erasmus|Année de césure
 Job étudiant|Job d'été
 Tuteur|Maître d'apprentissage
-Rapport de stage|Fiche de révision
+Rapport de stage|Portfolio
 Emploi du temps|Agenda
 Absence|Retard
 Moodle|ENT
@@ -322,7 +314,6 @@ Conjugaison|Grammaire
 Dictée|Récitation
 Philo|Littérature
 Start-up|Multinationale
-Auto-entrepreneur|Freelance
 Intérim|Saisonnier
 Promotion|Mutation
 Licenciement|Rupture conventionnelle
@@ -331,7 +322,7 @@ RTT|Congés payés
 Arrêt maladie|Congé parental
 Afterwork|Séminaire
 Team building|Formation
-Brainstorming|Compte rendu
+Compte rendu|Ordre du jour
 Deadline|Planning
 Objectifs|Bilan annuel
 Machine à café|Fontaine à eau
@@ -342,27 +333,131 @@ Cahier des charges|Devis
 Facture|Bon de commande
 Usine|Entrepôt
 Chantier|Atelier
-Chaîne de montage|Ligne de production
 Maintenance|Dépannage
 Casque de chantier|Chaussures de sécurité
+Parcoursup|Mon Master
 #3
 Doctorat|Agrégation
 Normale Sup|Polytechnique
-Concours|Classement
-Parcoursup|Dossier de candidature
 Khâgne|Maths sup
 Mention très bien|Félicitations du jury
 Crédits ECTS|Coefficient
-Reconversion|Pantouflage
 Portage salarial|Micro-entreprise
 Plan social|Délocalisation
 Astreinte|Travail posté
 Habilitation électrique|CACES
-GTB|Supervision
 Analyse fonctionnelle|Cahier de recette
 Mise en service|Essais en usine
+`,
+  },
+  {
+    id: 'elec',
+    name: 'Électricité & électronique',
+    hint: 'Du disjoncteur au microcontrôleur',
+    w: `
+#1
+Ampoule|LED
+Chargeur|Transformateur
+Multiprise|Adaptateur
+Thermostat|Thermomètre
+Pile|Batterie
+Aimant|Électroaimant
+Voiture électrique|Voiture hybride
+Interrupteur|Bouton poussoir
+Panneau solaire|Éolienne
+Fusible|Disjoncteur
+Capteur|Détecteur
+Borne de recharge|Station-service
+Prise|Rallonge
+Fil électrique|Câble
+Court-circuit|Panne de courant
+Compteur électrique|Tableau électrique
+Pylône|Poteau électrique
+Coup de jus|Électricité statique
+Plaque à induction|Gazinière
+Trottinette électrique|Vélo électrique
+Batterie externe|Chargeur sans fil
+Antenne|Parabole
+Radio|Talkie-walkie
+Sonnette|Interphone
+Détecteur de fumée|Détecteur de mouvement
+Réverbère|Feu tricolore
+Guirlande lumineuse|Néon
+Veilleuse|Lampe de chevet
+EDF|Engie
+Heures creuses|Heures pleines
+Clôture électrique|Fil barbelé
+#2
+Puce électronique|Carte mère
+Automate|Robot
+Volt|Ampère
+Arduino|Raspberry Pi
+Résistance|Condensateur
+Courant continu|Courant alternatif
+Batterie lithium|Pile rechargeable
+Multimètre|Oscilloscope
+Fer à souder|Pistolet à colle
+Moteur électrique|Moteur thermique
+Moteur|Alternateur
+Courant|Tension
+Watt|Kilowattheure
+Électricien|Électronicien
+Foudre|Arc électrique
+Dynamo|Groupe électrogène
+Phase|Neutre
+Basse tension|Haute tension
+Montage en série|Montage en parallèle
+Conducteur|Isolant
+Hertz|Décibel
+Analogique|Numérique
+Pince à dénuder|Pince coupante
+Linky|Compteur d'eau
+Tesla|Edison
+Câble Ethernet|Câble coaxial
+Puissance|Énergie
+Kilowatt|Cheval-vapeur
+Minuterie|Programmateur
+Prise de terre|Paratonnerre
+Écran LCD|Écran OLED
+#3
+GTB|Domotique
+Diode|Transistor
+Modbus|BACnet
+Régulateur PID|Régulateur tout ou rien
+Variateur de vitesse|Démarreur progressif
+Semi-conducteur|Supraconducteur
 Transformée de Laplace|Transformée de Fourier
 Fonction de transfert|Diagramme de Bode
+Onduleur|Redresseur
+Monophasé|Triphasé
+Microcontrôleur|Microprocesseur
+Relais|Contacteur
+Inductance|Impédance
+Loi d'Ohm|Lois de Kirchhoff
+Fréquence|Longueur d'onde
+Amplificateur opérationnel|Comparateur
+Filtre passe-bas|Filtre passe-haut
+Thermocouple|Sonde PT100
+Codeur|Potentiomètre
+Moteur pas à pas|Servomoteur
+Moteur asynchrone|Moteur synchrone
+Grafcet|Ladder
+Actionneur|Préactionneur
+SCADA|IHM
+Domino|Borne Wago
+Plaque d'essai|Circuit imprimé
+GBF|Alimentation stabilisée
+Électrocution|Électrisation
+Anode|Cathode
+Masse|Terre
+Interrupteur différentiel|Parafoudre
+Va-et-vient|Télérupteur
+Porte ET|Porte OU
+CAN|CNA
+Hacheur|Gradateur
+Boucle ouverte|Boucle fermée
+Consigne|Mesure
+Gaine|Goulotte
 `,
   },
   {
@@ -376,7 +471,6 @@ Clavier|Souris d'ordinateur
 Écran tactile|Pavé tactile
 Clé USB|Disque dur
 Wi-Fi|Bluetooth
-4G|5G
 Mot de passe|Code PIN
 Mail|SMS
 Appel vidéo|Message vocal
@@ -396,21 +490,16 @@ PlayStation|Xbox
 Mario|Sonic
 Minecraft|Fortnite
 Imprimante|Photocopieuse
-Chargeur|Batterie externe
 Application|Site web
 Téléchargement|Streaming
-Bug|Plantage
+Bug|Virus informatique
 Robot aspirateur|Tondeuse robot
-Voiture électrique|Voiture hybride
 Drone|Hélicoptère
 Montre connectée|Bracelet de sport
 Enceinte Bluetooth|Barre de son
 Appareil photo|Caméra
 Google Maps|Waze
 QR code|Code-barres
-Prise électrique|Multiprise
-Interrupteur|Bouton poussoir
-Panneau solaire|Éolienne
 #2
 Windows|Linux
 Android|iOS
@@ -423,7 +512,7 @@ Onglet|Favori
 Cloud|Serveur
 Fibre optique|ADSL
 Antivirus|Pare-feu
-Hacker|Arnaqueur en ligne
+Hacker|Arnaqueur
 Spam|Hameçonnage
 Cookies|Historique de navigation
 VPN|Navigation privée
@@ -436,7 +525,6 @@ Processeur|Carte graphique
 Mémoire vive|Stockage
 Pixel|Résolution
 Bit|Octet
-Programme|Script
 Intelligence artificielle|Réalité virtuelle
 Siri|Alexa
 Bitcoin|NFT
@@ -460,29 +548,14 @@ Among Us|Fall Guys
 Candy Crush|Angry Birds
 Les Sims|Animal Crossing
 Imprimante 3D|Découpe laser
-Arduino|Raspberry Pi
-Résistance|Condensateur
-Diode|LED
-Transistor|Puce électronique
-Fusible|Disjoncteur
-Courant continu|Courant alternatif
-Batterie lithium|Pile rechargeable
-Multimètre|Oscilloscope
-Fer à souder|Pistolet à colle
-Capteur|Détecteur
-Moteur électrique|Moteur thermique
-Automate|Robot industriel
-Thermostat|Minuteur
-Domotique|Maison connectée
 Caméra de surveillance|Alarme
 Badge|Digicode
 Télépéage|Paiement sans contact
-Borne de recharge|Station-service
 Câble HDMI|Câble USB
 Prise jack|Port USB-C
 #3
 Blockchain|Cryptomonnaie
-Open source|Freeware
+Logiciel libre|Logiciel gratuit
 Machine learning|Big data
 Deepfake|Photomontage
 Métavers|Jeu en ligne
@@ -499,11 +572,7 @@ API|Plugin
 Hexadécimal|Binaire
 Ondes radio|Rayons gamma
 Infrarouge|Ultraviolet
-Semi-conducteur|Supraconducteur
 Fibre de carbone|Graphène
-Modbus|Ethernet
-Régulateur PID|Tout ou rien
-Variateur de vitesse|Démarreur
 Disquette|CD-ROM
 MSN|Skype
 Fax|Télégramme

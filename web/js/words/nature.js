@@ -109,7 +109,6 @@ Suricate|Mangouste
 Lémurien|Ouistiti
 Orang-outan|Chimpanzé
 Narval|Béluga
-Lamantin|Dugong
 Axolotl|Têtard
 Tatou|Pangolin
 Wombat|Diable de Tasmanie
@@ -172,7 +171,7 @@ Café|Thé
 Chocolat chaud|Cappuccino
 Jus d'orange|Limonade
 Coca|Pepsi
-Glace à la vanille|Sorbet citron
+Glace|Sorbet
 Crêpe|Gaufre
 Gâteau|Tarte
 Cookie|Brownie
@@ -207,7 +206,7 @@ Carbonara|Bolognaise
 Raviolis|Gnocchis
 Saumon fumé|Thon en boîte
 Moules frites|Steak frites
-Huîtres|Escargots de Bourgogne
+Huîtres|Escargots
 Foie gras|Rillettes
 Comté|Emmental
 Roquefort|Bleu d'Auvergne
@@ -305,7 +304,7 @@ Nuage|Brouillard
 Pluie|Neige
 Orage|Tempête
 Éclair|Tonnerre
-Arc-en-ciel|Coucher de soleil
+Arc-en-ciel|Aurore boréale
 Vent|Courant d'air
 Feu|Lave
 Glaçon|Givre
@@ -321,12 +320,10 @@ Or|Argent
 Fer|Acier
 Diamant|Rubis
 Eau|Vapeur
-Chaud|Froid
-Jour|Nuit
 Été|Hiver
 Printemps|Automne
 Cœur|Poumon
-Cerveau|Estomac
+Estomac|Intestin
 Os|Muscle
 Œil|Oreille
 Dent|Ongle
@@ -335,7 +332,6 @@ Rhume|Grippe
 Vaccin|Médicament
 Microbe|Virus
 Squelette|Crâne
-Aimant|Électroaimant
 Fusée|Satellite
 Robot|Androïde
 #2
@@ -365,7 +361,6 @@ Fossile|Ambre
 Darwin|Mendel
 Newton|Einstein
 Température|Pression
-Volt|Ampère
 Watt|Joule
 Kilomètre|Mile
 Litre|Kilo
@@ -380,7 +375,6 @@ Marée|Vague
 Canicule|Sécheresse
 Inondation|Crue
 Réchauffement climatique|Couche d'ozone
-Énergie solaire|Énergie éolienne
 Pétrole|Charbon
 Centrale nucléaire|Barrage
 Recyclage|Compost
@@ -429,7 +423,7 @@ Effet papillon|Effet domino
 Placebo|Homéopathie
 Théorème de Pythagore|Théorème de Thalès
 Nombre pi|Nombre d'or
-Zéro|Nombre négatif
+Zéro|Infini
 Fractale|Spirale
 Algorithme|Équation
 Hypothèse|Théorie

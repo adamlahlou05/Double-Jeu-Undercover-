@@ -8,15 +8,12 @@ export default [
 #1
 Coup de foudre|Coup de cœur
 Coup de soleil|Coup de chaud
-Coup de main|Coup de pouce
 Coup de fil|Coup de sonnette
 Coup de théâtre|Coup de bluff
 Coup de vieux|Coup de jeune
 Bouc émissaire|Mouton noir
 Tête de mule|Tête en l'air
-Tête de linotte|Cervelle d'oiseau
-Langue de vipère|Mauvaise langue
-Poule mouillée|Froussard
+Poule mouillée|Tête brûlée
 Rat de bibliothèque|Bourreau de travail
 Oiseau de nuit|Lève-tôt
 Pot de colle|Sangsue
@@ -29,10 +26,8 @@ Chèque en blanc|Chèque en bois
 Peur bleue|Colère noire
 Humour noir|Humour pince-sans-rire
 Marché noir|Travail au noir
-Lune de miel|Voyage de noces
 Sixième sens|Troisième œil
 Septième ciel|Paradis
-Jardin secret|Bulle
 Casse-pieds|Rabat-joie
 Touche-à-tout|Couteau suisse
 Monsieur Tout-le-monde|Illustre inconnu
@@ -43,7 +38,7 @@ Tomber dans les pommes|Tourner de l'œil
 Avoir un poil dans la main|Avoir la flemme
 Casser les pieds|Taper sur les nerfs
 Coûter un bras|Coûter les yeux de la tête
-Il pleut des cordes|Il tombe des hallebardes
+Il pleut des cordes|Il pleut des hallebardes
 Avoir la tête dans les nuages|Être dans la lune
 Mettre les pieds dans le plat|Faire une gaffe
 Donner sa langue au chat|Jeter l'éponge
@@ -63,7 +58,6 @@ Mettre son grain de sel|Se mêler de ses oignons
 Raconter des salades|Mener en bateau
 Tirer les vers du nez|Cuisiner quelqu'un
 Vendre la mèche|Cracher le morceau
-Avoir un coup de barre|Avoir un coup de pompe
 Péter les plombs|Sortir de ses gonds
 La moutarde me monte au nez|Voir rouge
 Tomber sur un os|Être dans le pétrin
@@ -80,16 +74,14 @@ Avoir deux mains gauches|Avoir deux pieds gauches
 Passer l'éponge|Enterrer la hache de guerre
 Jeter de l'huile sur le feu|Mettre le feu aux poudres
 Avoir d'autres chats à fouetter|Avoir un agenda de ministre
-Quand les poules auront des dents|À la saint-glinglin
+Quand les poules auront des dents|À la Saint-Glinglin
 Se serrer la ceinture|Se serrer les coudes
 Faire l'autruche|Fermer les yeux
 Passer du coq à l'âne|Perdre le fil
-Avoir le melon|Se la péter
 Être à côté de la plaque|Être à l'ouest
 Ne pas être dans son assiette|Avoir un coup de mou
 En faire tout un fromage|En faire des tonnes
 Avoir la chair de poule|Avoir froid dans le dos
-Avoir les chocottes|Avoir la trouille
 Prendre la mouche|Monter sur ses grands chevaux
 La goutte d'eau|La cerise sur le gâteau
 Tomber à pic|Tomber à l'eau
@@ -109,7 +101,6 @@ Avoir la tête sur les épaules|Avoir les pieds sur terre
 Battre le fer tant qu'il est chaud|Saisir la balle au bond
 Avoir le bras long|Avoir des relations
 Mettre la main à la pâte|Retrousser ses manches
-Avoir un mot sur le bout de la langue|Avoir un trou noir
 Faire d'une pierre deux coups|Joindre l'utile à l'agréable
 Jouer avec le feu|Tenter le diable
 Marcher sur des œufs|Prendre des gants
@@ -152,7 +143,6 @@ Honte|Gêne
 Fierté|Orgueil
 Courage|Audace
 Patience|Persévérance
-Paresse|Flemmardise
 Amour|Amitié
 Passion|Obsession
 Haine|Rancune
@@ -182,18 +172,14 @@ Ennui|Solitude
 Stress|Pression sociale
 Fatigue|Épuisement
 Calme|Silence
-Bruit|Vacarme
-Surprise|Étonnement
 Curiosité|Indiscrétion
 Timidité|Pudeur
 Politesse|Respect
 Humour|Ironie
 Sarcasme|Moquerie
 Tradition|Habitude
-Mode|Tendance
 Routine|Rituel
 Passé|Mémoire
-Futur|Avenir
 Jeunesse|Enfance
 Vieillesse|Retraite
 Beauté|Charme
@@ -205,7 +191,6 @@ Doute|Hésitation
 Choix|Décision
 Promesse|Serment
 Défi|Pari
-Devoir|Obligation
 Droit|Privilège
 Idée|Intuition
 Opinion|Croyance
@@ -239,20 +224,15 @@ Altruisme|Générosité
 Narcissisme|Égoïsme
 Cynisme|Pessimisme
 Naïveté|Innocence
-Nonchalance|Désinvolture
-Mépris|Dédain
 Remords|Regret
-Rancœur|Ressentiment
 Euphorie|Extase
 Sérénité|Plénitude
-Griserie|Ivresse
 Zèle|Perfectionnisme
 Charisme|Aura
 Tact|Diplomatie
 Flair|Instinct de survie
 Bluff|Culot
 Alibi|Prétexte
-Soupçon|Présomption
 Trahison|Infidélité
 `,
   },
@@ -268,11 +248,9 @@ Slip de bain|Short de bain
 Sac banane|Sacoche
 Coupe mulet|Coupe au bol
 Moustache|Barbe de trois jours
-Perruque|Moumoute
 Dentier|Appareil dentaire
 Faux ongles|Faux cils
 Tatouage raté|Piercing au nombril
-Chatouilles|Guili-guili
 Haleine du matin|Odeur de pieds
 Danse de la joie|Danse des canards
 La chenille|La Macarena
@@ -291,12 +269,11 @@ Chaussure mouillée|Chaussette trouée
 Douche froide|Lunette des toilettes froide
 Rouleau de papier vide|Savon qui glisse
 Bras engourdi|Fourmis dans les jambes
-Ovni|Soucoupe volante
 Extraterrestre|Fantôme
 Zombie|Vampire
 Loup-garou|Momie égyptienne
 Sorcière|Fée
-Lutin|Farfadet
+Lutin|Troll
 Petite souris|Lapin de Pâques
 Monstre sous le lit|Monstre du placard
 Vendredi 13|Trèfle à quatre feuilles
@@ -309,12 +286,13 @@ Pédalo|Bouée canard
 Camping-car|Caravane
 Tente qui se déplie seule|Matelas gonflable
 Aire d'autoroute|Sandwich triangle
+Surnom|Pseudo
 #2
 Monosourcil|Rouflaquettes
 Se curer le nez|Se ronger les ongles
 Karaoké raté|Blague qui tombe à plat
 Boule puante|Fluide glacial
-Tonton gênant au mariage|Cousin qu'on voit qu'à Noël
+Tonton gênant au mariage|Cousin qu'on ne voit qu'à Noël
 Paquet de chips au cinéma|Paille qui fait du bruit
 Réveil en sursaut|Bave sur l'oreiller
 Coup de jus|Coup dans le coude
@@ -325,11 +303,9 @@ Complot|Rumeur
 Horoscope|Voyance
 Boule de cristal|Marc de café
 Passer sous une échelle|Croiser un chat noir
-Homonyme|Surnom
 Correcteur automatique|Faute de frappe
 Vocal de cinq minutes|Pavé par SMS
 Groupe WhatsApp de famille|Chaîne de mails
-Segway|Gyroroue
 Machine à café en panne|Distributeur qui avale la pièce
 Imprimante qui bourre|Wi-Fi qui rame
 Chaussures à scratch|Chaussures à roulettes
