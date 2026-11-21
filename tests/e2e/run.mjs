@@ -7,6 +7,7 @@ import { chromium } from 'playwright';
 import { mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { startServer } from '../../scripts/serve.mjs';
+import * as Engine from '../../web/js/engine.js';
 
 const SHOTS = process.env.SHOTS === '1';
 const OUT = fileURLToPath(new URL('./shots/', import.meta.url));
@@ -154,21 +155,30 @@ async function dealAll({ shots = false } = {}) {
   return g;
 }
 
+/**
+ * Le tour de parole : un seul écran. On vérifie que l'ordre complet est affiché, qu'il n'y a qu'un
+ * bouton (« Passer au vote ») et, si la prise de notes est active, on note tout le monde dans le désordre.
+ */
 async function speakAll({ notes = false, tag = 'x' } = {}) {
-  for (let guard = 0; guard < 40; guard++) {
-    const g = await game();
-    if (g.phase !== 'clues') break;
-    const speaker = g.players[g.order[g.speakIdx]].name;
-    check((await text('.speaker .big')).trim() === speaker, `orateur affiché ≠ ${speaker}`);
-    if (notes) {
-      await $('#clue').fill(`${tag}${g.round}${g.speakIdx}`);
-      await tap('form[data-form="clue"] button[type="submit"]');
-    } else {
-      await tap(act('next-speaker'));
-    }
+  const g = await game();
+  if (g.phase !== 'clues') return;
+  const shown = await page.locator('.screen:not(.leave) .order li .name').evaluateAll((els) => els.map((e) => e.textContent.trim()));
+  check(shown.join('|') === g.order.map((i) => g.players[i].name).join('|'), `ordre de parole affiché (${shown.join(', ')}) ≠ ordre du moteur`);
+  check((await text('.headline .big')).includes(g.players[g.order[0]].name), 'le premier à parler n’est pas annoncé');
+  const buttons = await page.locator('.screen:not(.leave) .dock [data-act]').evaluateAll((els) => els.map((e) => e.dataset.act));
+  check(buttons.join() === 'open-vote', `le tour de parole doit n’avoir qu’un bouton, « Passer au vote » (trouvé : ${buttons.join(', ')})`);
+  check(!(await exists('[data-act="next-speaker"]')) && !(await exists('[data-act="prev-speaker"]')), 'il reste un bouton à presser joueur par joueur');
+  check((await exists('[data-act="clue-edit"]')) === notes, 'la prise de notes ne suit pas le réglage de la partie');
+  if (!notes) return;
+  for (const i of g.order.slice().reverse()) {
+    await tap(act('clue-edit', `[data-i="${i}"]`));
+    await wait(160);
+    await $('#clue').fill(`${tag}${g.round}j${i}`);
+    await tap('form[data-form="clue"] button[type="submit"]');
+    await wait(100);
   }
-  await settle();
-  check((await game()).phase === 'debate', 'le débat ne s’ouvre pas après les indices');
+  const after = await game();
+  check(after.phase === 'clues' && after.clues.filter((c) => c.round === g.round).length === g.order.length, 'les indices notés dans le désordre ne sont pas tous enregistrés');
 }
 
 const roleIdx = (g, role) => g.players.map((p, i) => (p.alive && p.role === role ? i : -1)).filter((i) => i >= 0);
@@ -238,19 +248,75 @@ async function run(url) {
     await $('#pf-name').fill('  adam ');
     await tap(act('profile-save'));
     check(await exists('.err'), 'un nom en double est accepté');
+    // « Joueur N » est un texte indicatif, pas une valeur : champ vide, et nom par défaut si on n'écrit rien.
     await $('#pf-name').fill('');
-    await tap(act('profile-save'));
-    check((await text('.err')).includes('prénom'), 'un nom vide est accepté');
+    check((await $('#pf-name').getAttribute('placeholder')) === 'Joueur 1', 'le nom par défaut n’est pas proposé en texte indicatif');
+    check((await $('#pf-name').inputValue()) === '', 'le champ du nom n’est pas vide');
     await shot('03-profil');
-    // photo depuis un fichier
-    const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAFklEQVQIW2P8z8Dwn4GBgYGJAQoAHxcCAr7cAZUAAAAASUVORK5CYII=', 'base64');
-    await page.locator('#pf-pick').setInputFiles({ name: 'moi.png', mimeType: 'image/png', buffer: png });
+    // photo : uniquement par la caméra intégrée (plus de galerie, plus d'appli Appareil photo)
+    check(!(await exists('input[type="file"]')), 'le choix dans la galerie est encore proposé');
+    await tap(act('camera-open'));
+    await page.locator('#modal .camframe.is-live').waitFor({ timeout: 6000 });
+    await wait(500);
+    const cam = await page.evaluate(() => {
+      const d = document.querySelector('#modal .dialog.cam').getBoundingClientRect();
+      const v = document.getElementById('cam-video');
+      const m = window.__dj.S.modal;
+      return { w: d.width, h: d.height, vw: innerWidth, vh: innerHeight, playing: v.videoWidth > 0 && !v.paused, facing: m.facing, many: m.many, mirror: m.mirror };
+    });
+    check(cam.facing === 'user', 'la caméra avant ne s’ouvre pas par défaut');
+    check(cam.playing, 'l’aperçu de la caméra ne s’affiche pas');
+    check(cam.w < cam.vw && cam.h < cam.vh * 0.8, `la caméra n’est pas dans une fenêtre de taille moyenne (${Math.round(cam.w)} × ${Math.round(cam.h)})`);
+    check(cam.many && (await exists('[data-act="camera-flip"]')), 'le bouton pour changer de caméra est absent');
+    await shot('03b-camera');
+    await tap(act('camera-flip'));
+    await page.locator('#modal .camframe.is-live').waitFor({ timeout: 6000 });
+    check((await page.evaluate(() => window.__dj.S.modal.facing)) === 'environment', 'le passage à la caméra arrière ne fonctionne pas');
+    await tap(act('camera-flip'));
+    await page.locator('#modal .camframe.is-live').waitFor({ timeout: 6000 });
+    await wait(400);
+    await tap(act('camera-shoot'));
+    check(await exists('.camframe.is-shot'), 'la photo prise n’est pas montrée');
+    check((await exists('[data-act="camera-keep"]')) && (await exists('[data-act="camera-retake"]')), 'il manque « Garder » ou « Reprendre »');
+    await shot('03c-camera-apercu');
+    await tap(act('camera-retake'));
+    check(await exists('.camframe.is-live'), '« Reprendre » ne relance pas l’aperçu');
+    await wait(300);
+    await tap(act('camera-shoot'));
+    await tap(act('camera-keep'));
     await page.locator('.screen:not(.leave) .preview .av.photo img').waitFor({ timeout: 3000 });
-    await $('#pf-name').fill('Noé');
+    const photo = await page.evaluate(() => new Promise((resolve) => {
+      const url = window.__dj.S.draft.photo;
+      const img = new Image();
+      img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight, jpeg: url.startsWith('data:image/jpeg'), size: url.length, live: !!window.__dj.Cam.cameraStream() });
+      img.onerror = () => resolve({ w: 0, h: 0, jpeg: false, size: 0, live: true });
+      img.src = url;
+    }));
+    check(photo.w === 256 && photo.h === 256 && photo.jpeg, `la photo n’est pas un carré compressé de 256 px (${photo.w} × ${photo.h})`);
+    check(photo.size < 60000, `la photo est trop lourde (${photo.size} caractères)`);
+    check(!photo.live, 'la caméra reste allumée après la photo');
     await tap(act('profile-save'));
     await settle();
     let d = await db();
     check(d.profiles.length === 7 && d.profiles[6].photo === 'photo', 'la photo du profil n’est pas enregistrée');
+    check(d.profiles.length === 7 && d.profiles[6].name === 'Joueur 1', `un nom laissé vide ne donne pas « Joueur 1 » (${d.profiles[6] && d.profiles[6].name})`);
+    // autorisation refusée : message clair, et on retombe sur les personnages
+    await tap(act('profile-new'));
+    await settle();
+    check((await $('#pf-name').getAttribute('placeholder')) === 'Joueur 2', 'le nom indicatif ne suit pas les noms déjà pris');
+    await page.evaluate(() => {
+      window.__gum = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+      navigator.mediaDevices.getUserMedia = () => Promise.reject(Object.assign(new Error('refus'), { name: 'NotAllowedError' }));
+    });
+    await tap(act('camera-open'));
+    await page.locator('#modal .camframe.is-error').waitFor({ timeout: 4000 });
+    check((await text('.cam-msg')).includes('pas autorisé'), 'le refus de l’appareil photo n’est pas expliqué');
+    await shot('03d-camera-refus');
+    await tap(act('close-modal'));
+    check(!(await exists('.camframe')) && (await exists('.facebtn')), 'après un refus, on ne retombe pas sur les personnages');
+    await page.evaluate(() => { navigator.mediaDevices.getUserMedia = window.__gum; });
+    await tap(act('back'));
+    await settle();
     await shot('04-joueurs');
     // persistance après fermeture
     await page.reload();
@@ -263,6 +329,7 @@ async function run(url) {
     await settle();
     await tap(act('profile-edit'));
     await settle();
+    check((await $('#pf-name').inputValue()) === '' && (await $('#pf-name').getAttribute('placeholder')) === 'Joueur 1', 'un nom par défaut doit se présenter comme un champ vide');
     await tap(act('draft-photo-clear'));
     await $('#pf-name').fill('Noé B.');
     await tap(act('profile-save'));
@@ -288,14 +355,8 @@ async function run(url) {
     await tap(act('start-game'));
     await settle();
     let g = await dealAll({ shots: true });
-    await shot('09-indices');
-    // retour arrière pendant les indices
-    await tap(act('next-speaker'));
-    await tap(act('next-speaker'));
-    await tap(act('prev-speaker'));
-    check((await game()).speakIdx === 1, 'le retour au joueur précédent ne fonctionne pas');
     await speakAll();
-    await shot('10-debat');
+    await shot('09-tour-de-parole');
     // « Mon mot »
     await tap(act('peek'));
     await wait(300);
@@ -369,16 +430,32 @@ async function run(url) {
     await settle();
     let g = await dealAll();
     check(g.words.key !== before.log && ![before.civil, before.under].includes(g.words.civil), 'la même paire est ressortie');
-    // indices notés : répétition refusée
+    // indices notés en touchant un joueur, sans ordre imposé : répétition refusée, correction possible
+    const [first, second] = g.order;
+    await tap(act('clue-edit', `[data-i="${second}"]`));
+    await wait(200);
     await $('#clue').fill('Rouge');
     await tap('form[data-form="clue"] button[type="submit"]');
+    check((await game()).clues.length === 1 && (await game()).clues[0].by === second, 'on ne peut pas noter le deuxième joueur avant le premier');
+    await tap(act('clue-edit', `[data-i="${first}"]`));
+    await wait(200);
     await $('#clue').fill('rouges');
     await tap('form[data-form="clue"] button[type="submit"]');
     check((await text('.err')).includes('déjà été dit'), 'un indice répété est accepté');
-    check((await game()).speakIdx === 1, 'un indice refusé fait quand même avancer le tour');
+    check((await game()).clues.length === 1, 'un indice refusé est quand même enregistré');
     await shot('21-indice-refuse');
+    await tap(act('close-modal'));
+    await tap(act('clue-edit', `[data-i="${second}"]`));
+    await wait(200);
+    check((await $('#clue').inputValue()) === 'Rouge', 'l’indice déjà noté n’est pas repris pour correction');
+    await tap(act('clue-clear'));
+    check((await game()).clues.length === 0, 'effacer un indice ne fonctionne pas');
     await speakAll({ notes: true, tag: 'mot' });
+    // chrono : à l'arrêt tant que la table ne l'a pas lancé
     check(await exists('#timer-txt'), 'le chrono du débat est absent');
+    await wait(700);
+    check((await text('#timer-txt')).trim() === '2:00', 'le chrono démarre tout seul avant le débat');
+    await tap(act('timer-toggle'));
     await wait(1300);
     const t1 = await text('#timer-txt');
     check(t1.trim() !== '2:00', `le chrono ne tourne pas (${t1})`);
@@ -386,7 +463,7 @@ async function run(url) {
     const t2 = await text('#timer-txt');
     await wait(700);
     check((await text('#timer-txt')) === t2, 'la pause du chrono ne fonctionne pas');
-    await shot('22-debat-chrono');
+    await shot('22-tour-notes-chrono');
     await tap(act('open-vote'));
     await settle();
     g = await game();
@@ -534,7 +611,7 @@ async function run(url) {
     await tap(act('after-reveal'));
     await settle();
     g = await game();
-    check(g.phase === 'debate' && g.vote === null && !g.players[leaver].alive, 'après un départ, le vote entamé n’est pas annulé');
+    check(g.phase === 'clues' && g.vote === null && !g.players[leaver].alive, 'après un départ, le vote entamé n’est pas annulé');
     // abandon
     await tap(act('game-menu'));
     await wait(300);
@@ -918,7 +995,8 @@ async function nativeBridge(browser, url) {
 /* ---------- Lancement ---------- */
 
 const { server, url } = await startServer(0);
-const browser = await chromium.launch({ executablePath: process.env.CHROME_PATH || undefined, args: ['--no-sandbox'] });
+// Caméras factices de Chromium (deux, comme sur un téléphone) : la photo de profil se teste sans matériel.
+const browser = await chromium.launch({ executablePath: process.env.CHROME_PATH || undefined, args: ['--no-sandbox', '--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream=device-count=2'] });
 const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: SHOTS ? 2 : 1, isMobile: true, hasTouch: true, acceptDownloads: true, locale: 'fr-FR' });
 page = await ctx.newPage();
 page.on('pageerror', (e) => errors.push(`erreur JavaScript : ${e.message}`));

@@ -2,6 +2,8 @@
 // que ce qui change. Dans l'application Android, chaque tiroir est un fichier écrit de façon atomique
 // par la coque native (window.DJNative) ; dans un navigateur, on se rabat sur localStorage.
 
+import { upgradeGame } from './engine.js';
+
 const NS = 'dj2:';
 const KEYS = ['meta', 'profiles', 'history', 'game'];
 const native = typeof window !== 'undefined' && window.DJNative ? window.DJNative : null;
@@ -77,7 +79,7 @@ function cleanHistory(h) {
 function cleanGame(g) {
   if (!g || typeof g !== 'object' || g.v !== 1 || !Array.isArray(g.players) || !Array.isArray(g.cards)) return null;
   if (g.players.length !== g.cards.length || !g.phase || !g.words) return null;
-  return g;
+  return upgradeGame(g);
 }
 
 /** Charge toutes les données, en tolérant les tiroirs vides ou abîmés. */

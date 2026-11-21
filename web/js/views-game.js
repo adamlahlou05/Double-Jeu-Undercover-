@@ -7,7 +7,7 @@ import * as E from './engine.js';
 import { leaderboard } from './stats.js';
 import { plural, listNames, clockLabel } from './dom.js';
 import { DB, S, lookOf, nightStats, profileById } from './state.js';
-import { roleBadge, recapPoints, recapRounds, wordPair, catsSheet, WIN_LABEL } from './views.js';
+import { roleBadge, recapPoints, recapRounds, wordPair, catsSheet, cameraDialog, WIN_LABEL } from './views.js';
 
 const withRound = (title, g) => `${title}<small>tour ${g.round}</small>`;
 const gameTop = (title, right = '') => `<header class="top"><button class="ibtn" data-act="game-menu" aria-label="Menu de la partie">${icon('pause')}</button><h1 class="title">${title}</h1>${right}</header>`;
@@ -59,72 +59,64 @@ function cardModal(g) {
 </div>`;
 }
 
-/* ---------- Indices ---------- */
+/* ---------- Tour de parole : ordre, indices notés, débat ---------- */
 
-function clues(g) {
-  const cur = E.currentSpeaker(g);
-  const p = g.players[cur];
-  const roundClues = g.clues.filter((c) => c.round === g.round);
-  const rows = g.order.map((i, k) => {
-    const c = roundClues.find((x) => x.by === i);
-    const state = k < g.speakIdx ? 'done' : k === g.speakIdx ? 'cur' : '';
-    return `<li class="${state}"><i class="n">${k + 1}</i>${who(g, i, 's36')}<span class="grow name">${nameOf(g, i)}</span><span class="tag">${c ? esc(c.text) : state === 'done' ? 'a parlé' : state === 'cur' ? 'à toi' : ''}</span></li>`;
-  }).join('');
-  const last = g.speakIdx === g.order.length - 1;
-  const form = g.options.notes
-    ? `<form class="inline" data-form="clue" novalidate><input class="field" id="clue" data-in="clue" value="${esc(S.gui.clue)}" maxlength="${E.MAX_CLUE}" placeholder="L’indice de ${esc(p.name)}" autocomplete="off" autocapitalize="sentences" spellcheck="false" enterkeyhint="done" aria-label="Indice de ${esc(p.name)}"><button class="btn sun" type="submit">Valider</button></form>${S.gui.error ? `<p class="err onbg" role="alert">${esc(S.gui.error)}</p>` : ''}`
-    : '';
-  const prev = g.speakIdx > 0 ? `<button class="btn soft" data-act="prev-speaker" aria-label="Revenir au joueur précédent">${icon('back', 20)}</button>` : '';
-  const next = g.options.notes ? '' : `<button class="btn sun block" data-act="next-speaker">${last ? 'Tout le monde a parlé' : 'Suivant'}</button>`;
-  return `${gameTop(`Tour ${g.round}`, peekBtn)}
-<div class="scroll">
-  <div class="speaker" data-key="sp-${g.round}-${cur}">${avatar(lookOf(p), 's96')}<span class="over">${g.speakIdx === 0 ? 'Ouvre le tour' : 'Au tour de'}</span><b class="big">${esc(p.name)}</b><span class="sub">Un seul mot, en rapport avec ton mot secret.</span></div>
-  ${form}
-  <ol class="order">${rows}</ol>
-  ${outList(g)}
-</div>
-${prev || next ? `<div class="dock">${prev}${next}</div>` : ''}`;
-}
-
-/* ---------- Débat ---------- */
-
-function timerBlock() {
+function timerBar() {
   const t = S.gui.timer;
   if (!t) return '';
-  const C = 2 * Math.PI * 52;
   const frac = t.total ? Math.max(0, t.left) / t.total : 0;
-  const label = t.left <= 0 ? 'Remettre le chrono' : t.running ? 'Pause' : t.left < t.total ? 'Reprendre' : 'Démarrer';
-  return `<div class="timerbox${t.left <= 0 ? ' done' : t.left <= 10 ? ' hot' : ''}">
-    <div class="timer"><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="tr" cx="60" cy="60" r="52"/><circle class="tp" id="timer-ring" cx="60" cy="60" r="52" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${(C * (1 - frac)).toFixed(1)}" transform="rotate(-90 60 60)"/></svg><b id="timer-txt" role="timer">${clockLabel(t.left)}</b></div>
-    <button class="btn soft sm" data-act="${t.left <= 0 ? 'timer-reset' : 'timer-toggle'}">${icon(t.left <= 0 ? 'replay' : t.running ? 'pause' : 'play', 18)}${label}</button>
+  const over = t.left <= 0;
+  const label = over ? 'Relancer' : t.running ? 'Pause' : t.left < t.total ? 'Reprendre' : 'Lancer';
+  return `<div class="timerbar${over ? ' done' : t.left <= 10 ? ' hot' : ''}${t.running ? ' run' : ''}">
+    <b id="timer-txt" role="timer" aria-label="Chrono du débat">${clockLabel(t.left)}</b>
+    <span class="grow"><span class="tl">${over ? 'Temps écoulé : on vote !' : 'Chrono du débat'}</span><span class="tline"><i id="timer-bar" style="width:${(frac * 100).toFixed(1)}%"></i></span></span>
+    <button class="btn soft sm" data-act="${over ? 'timer-reset' : 'timer-toggle'}">${icon(over ? 'replay' : t.running ? 'pause' : 'play', 18)}${label}</button>
   </div>`;
 }
 
-function clueRecap(g) {
-  if (!g.options.notes || !g.clues.length) return '';
-  const rows = g.order.map((i) => {
-    const mine = g.clues.filter((c) => c.by === i).map((c) => `<span class="${c.round === g.round ? 'now' : ''}">${esc(c.text)}</span>`).join('');
-    return `<div class="row">${who(g, i, 's36')}<span class="grow name">${nameOf(g, i)}</span><span class="cluelist">${mine}</span></div>`;
-  }).join('');
-  return `<div class="panel list"><h3>Indices donnés</h3>${rows}</div>`;
+function talkInfo(g) {
+  const r = E.remaining(g);
+  if (g.mode === 'mystery') return `${plural(r.alive, 'joueur')} en jeu. Combien d’infiltrés ? Mystère.`;
+  if (g.mode === 'flash') return `${plural(r.alive, 'joueur')}, ${plural(r.infiltrators, 'infiltré')}, un seul vote : visez juste.`;
+  return `${plural(r.alive, 'joueur')} en jeu, dont ${plural(r.infiltrators, 'infiltré')}.`;
 }
 
-function debate(g) {
-  const r = E.remaining(g);
-  const info = g.mode === 'mystery'
-    ? `${plural(r.alive, 'joueur')} en jeu. Combien d’infiltrés ? Mystère.`
-    : g.mode === 'flash'
-      ? `${plural(r.alive, 'joueur')}, ${plural(r.infiltrators, 'infiltré')}, un seul vote : visez juste.`
-      : `${plural(r.alive, 'joueur')} en jeu, dont ${plural(r.infiltrators, 'infiltré')}.`;
-  return `${gameTop(withRound('Débat', g), peekBtn)}
+function clues(g) {
+  const notes = g.options.notes;
+  const rows = g.order.map((i, k) => {
+    const now = notes ? E.clueOf(g, i) : '';
+    const past = notes ? g.clues.filter((c) => c.by === i && c.round !== g.round) : [];
+    const under = `${k === 0 ? '<span class="tag">ouvre le tour</span>' : ''}${past.length ? `<span class="past">${past.map((c) => `<i>${esc(c.text)}</i>`).join('')}</span>` : ''}`;
+    const right = !notes ? '' : now ? `<span class="cluechip">${esc(now)}</span>` : `<span class="noteic">${icon('edit', 18)}</span>`;
+    const inner = `<i class="n">${k + 1}</i>${who(g, i, 's44')}<span class="grow"><span class="name">${nameOf(g, i)}</span>${under}</span>${right}`;
+    return `<li class="${k === 0 ? 'first' : ''}" data-key="o${i}">${notes
+      ? `<button class="orow" data-act="clue-edit" data-i="${i}" aria-label="${now ? 'Corriger' : 'Noter'} l’indice de ${nameOf(g, i)}">${inner}</button>`
+      : `<div class="orow">${inner}</div>`}</li>`;
+  }).join('');
+  return `${gameTop(`Tour ${g.round}`, peekBtn)}
 <div class="scroll">
-  <div class="headline"><b class="big">Qui bluffe ?</b><span class="sub">Accusez, défendez-vous, comparez les indices. ${info}</span></div>
-  ${timerBlock()}
-  ${clueRecap(g)}
-  <div class="strip">${g.order.map((i) => `<span class="mini">${who(g, i, 's44')}<span>${nameOf(g, i)}</span></span>`).join('')}</div>
+  <div class="headline" data-key="talk-${g.round}-${g.order[0]}"><b class="big">${nameOf(g, g.order[0])} commence</b><span class="sub">Chacun donne un seul mot, dans cet ordre. Puis débattez : qui bluffe ? ${talkInfo(g)}</span></div>
+  ${timerBar()}
+  <ol class="order">${rows}</ol>
+  ${notes ? '<p class="lead soft tip">Touche un joueur pour noter son indice. Rien n’est obligatoire.</p>' : ''}
   ${outList(g)}
 </div>
-<div class="dock"><button class="btn soft" data-act="prev-speaker" aria-label="Revenir aux indices">${icon('back', 20)}</button><button class="btn sun block" data-act="open-vote">Passer au vote</button></div>`;
+<div class="dock"><button class="btn sun lg block" data-act="open-vote">Passer au vote</button></div>`;
+}
+
+function clueDialog(g) {
+  const i = S.modal.i;
+  const p = g.players[i];
+  if (!p) return '';
+  const had = !!E.clueOf(g, i);
+  return `<div class="dialog" role="dialog" aria-label="Indice de ${esc(p.name)}">
+  ${who(g, i, 's72')}<h2>L’indice de ${esc(p.name)}</h2>
+  <form class="dlg-form" data-form="clue" novalidate>
+    <input class="field" id="clue" data-in="clue" value="${esc(S.gui.clue)}" maxlength="${E.MAX_CLUE}" placeholder="Son mot" autocomplete="off" autocapitalize="sentences" spellcheck="false" enterkeyhint="done" aria-label="Indice de ${esc(p.name)}">
+    ${S.gui.error ? `<p class="err" role="alert">${esc(S.gui.error)}</p>` : ''}
+    <div class="dlg-btns"><button class="btn well" type="button" data-act="${had ? 'clue-clear' : 'close-modal'}">${had ? 'Effacer' : 'Annuler'}</button><button class="btn ink" type="submit">Noter</button></div>
+  </form>
+</div>`;
 }
 
 /* ---------- Vote ---------- */
@@ -142,7 +134,7 @@ function voteOpen(g) {
       : 'À trois, tout le monde pointe un joueur du doigt. Touche celui qui a le plus de voix.';
   const dock = tie
     ? `<button class="btn soft" data-act="tie-cancel">Annuler</button><button class="btn sun block" data-act="tie-go"${sel.length < 2 ? ' disabled' : ''}>${second ? 'Tirer au sort' : 'Départager'}</button>`
-    : `${second ? '' : `<button class="btn soft" data-act="back-to-debate" aria-label="Revenir au débat">${icon('back', 20)}</button>`}<button class="btn line block" data-act="tie-mode">Il y a égalité</button>`;
+    : `${second ? '' : `<button class="btn soft" data-act="back-to-talk" aria-label="Revenir au tour de parole">${icon('back', 20)}</button>`}<button class="btn line block" data-act="tie-mode">Il y a égalité</button>`;
   return `${gameTop(second ? 'Départage' : withRound('Vote', g), peekBtn)}
 <div class="scroll">
   <div class="headline"><b class="big">${head}</b><span class="sub">${sub}</span></div>
@@ -164,7 +156,7 @@ function voteSecret(g) {
   <div class="pass tall" data-key="voter-${v.stage}-${voter}">${avatar(lookOf(p), 's120')}<span class="over">Passe le téléphone à</span><b class="big">${esc(p.name)}</b><span class="sub">${v.stage === 2 ? 'Second vote, entre les ex æquo seulement.' : 'Chacun vote en secret, à son tour.'}</span></div>
   <div class="dots" aria-label="Vote ${v.cursor + 1} sur ${v.queue.length}">${dots}</div>
 </div>
-<div class="dock col">${v.cursor > 0 ? `<button class="link onbg" data-act="undo-ballot">Erreur de ${nameOf(g, v.queue[v.cursor - 1])} ? Reprendre son vote</button>` : v.stage === 1 ? '<button class="link onbg" data-act="back-to-debate">Revenir au débat</button>' : ''}<button class="btn sun lg block" data-act="gate-open">C’est moi, je vote</button></div>`;
+<div class="dock col">${v.cursor > 0 ? `<button class="link onbg" data-act="undo-ballot">Erreur de ${nameOf(g, v.queue[v.cursor - 1])} ? Reprendre son vote</button>` : v.stage === 1 ? '<button class="link onbg" data-act="back-to-talk">Revenir au tour de parole</button>' : ''}<button class="btn sun lg block" data-act="gate-open">C’est moi, je vote</button></div>`;
   }
   const targets = v.candidates.filter((i) => i !== voter);
   return `${gameTop(title)}
@@ -296,7 +288,6 @@ export function game() {
   switch (g.phase) {
     case 'deal': return deal(g);
     case 'clues': return clues(g);
-    case 'debate': return debate(g);
     case 'vote': return g.options.vote === 'secret' ? voteSecret(g) : voteOpen(g);
     case 'tiebreak': return tiebreak(g);
     case 'tally': return tally(g);
@@ -315,7 +306,6 @@ export function gameKey() {
   switch (g.phase) {
     case 'deal': return `game/deal/${g.id}`;
     case 'clues': return `game/clues/${g.round}`;
-    case 'debate': return `game/debate/${g.round}`;
     case 'vote': return g.options.vote === 'secret' ? `game/vote/${g.round}/${v.stage}/${v.cursor}/${S.gui.gate ? 'gate' : 'pick'}` : `game/vote/${g.round}/${v.stage}`;
     case 'tiebreak': return `game/tie/${g.round}`;
     case 'tally': return `game/tally/${g.round}/${v.stage}`;
@@ -330,7 +320,7 @@ export function gameKey() {
 
 function menuSheet(g) {
   const inDeal = g.phase === 'deal';
-  const canLeave = ['clues', 'debate', 'vote', 'tiebreak', 'tally'].includes(g.phase);
+  const canLeave = ['clues', 'vote', 'tiebreak', 'tally'].includes(g.phase);
   const row = (act, ic, title, hint, cls = '') => `<button class="rowbtn ${cls}" data-act="${act}"><span class="opt-ic">${icon(ic, 20)}</span><span class="grow"><b>${title}</b><span>${hint}</span></span></button>`;
   return `<div class="sheet" role="dialog" aria-label="Menu de la partie">
   <div class="sheet-head"><h2>Partie en pause</h2></div>
@@ -377,7 +367,9 @@ export function modal() {
     case 'menu': return g ? { html: menuSheet(g), kind: 'k-sheet', key: 'menu' } : null;
     case 'peek': return g ? { html: peekSheet(g), kind: m.step === 'pick' ? 'k-sheet' : 'k-center', key: `peek-${m.step}` } : null;
     case 'leave': return g ? { html: leaveSheet(g), kind: 'k-sheet', key: 'leave' } : null;
+    case 'clue': return g && g.phase === 'clues' ? { html: clueDialog(g), kind: 'k-center k-top', key: `clue-${m.i}` } : null;
     case 'cats': return { html: catsSheet(), kind: 'k-sheet', key: 'cats' };
+    case 'camera': return { html: cameraDialog(m), kind: 'k-center', key: 'camera' };
     case 'confirm': return { html: confirmDialog(m), kind: 'k-center', key: `confirm-${m.act}-${m.title}` };
     default: return null;
   }

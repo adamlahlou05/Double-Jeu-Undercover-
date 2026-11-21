@@ -7,11 +7,12 @@ import { morphHtml, typo } from './dom.js';
 import { sfx, buzz, configureFeedback } from './sfx.js';
 import { pickPair, buildPool, CATEGORIES, CUSTOM_CAT } from './words/index.js';
 import { norm } from './text.js';
-import { suggestLook } from './avatars.js';
+import { suggestLook, avatarSprite, faceId } from './avatars.js';
+import * as Cam from './camera.js';
 import { exportPayload, parseImport, DEFAULT_SETTINGS } from './store.js';
 import {
   DB, S, TABS, save, go, back, tab, route, freshGui, profileById, defaultSetup, fitRoles, quickSetup,
-  invalidateStats, activeGame, newId,
+  invalidateStats, activeGame, newId, isDefaultName, nextDefaultName,
 } from './state.js';
 
 const $stage = document.getElementById('stage');
@@ -74,7 +75,12 @@ function renderModal() {
   }
   $modal.className = `modal-root open ${m.kind}`;
   const html = typo(m.html);
-  if (modalKey !== m.key) { $modal.innerHTML = html; modalKey = m.key; } else morphHtml($modal, html);
+  if (modalKey !== m.key) {
+    $modal.innerHTML = html;
+    modalKey = m.key;
+    const field = $modal.querySelector('input.field');
+    if (field) { try { field.focus(); field.select(); } catch (e) { /* sans gravité */ } }
+  } else morphHtml($modal, html);
 }
 
 let toastTimer = 0;
@@ -105,6 +111,7 @@ function render() {
   const html = typo((SCREENS[r.name] || V.home)(r.params));
   if (!screenEl || key !== screenKey) swapScreen(html, key); else morphHtml(screenEl, html);
   renderModal();
+  syncCamera();
   syncEnv(r);
 }
 
@@ -154,13 +161,12 @@ function enterPhase(g, before) {
   gui.error = '';
   gui.tieMode = false;
   gui.tieSel = [];
-  if (gui.timer && g.phase !== 'debate') gui.timer.running = false;
+  if (gui.timer && g.phase !== 'clues') gui.timer.running = false;
   switch (g.phase) {
     case 'clues':
-      if (!before || before.round !== g.round) { gui.timer = null; gui.clue = ''; }
-      break;
-    case 'debate':
-      if (g.options.timer && !gui.timer) startTimer(g.options.timer);
+      // Nouveau tour : chrono remis à zéro, à l'arrêt. C'est la table qui le lance quand le débat commence.
+      if (!before || before.round !== g.round || !gui.timer) gui.timer = idleTimer(g);
+      gui.clue = '';
       break;
     case 'vote':
       gui.gate = true;
@@ -241,6 +247,8 @@ function finishGame(g) {
 
 /* ---------- Chrono du débat ---------- */
 
+const idleTimer = (g) => (g.options.timer ? { total: g.options.timer, left: g.options.timer, running: false, last: Date.now() } : null);
+
 function startTimer(total) {
   S.gui.timer = { total, left: total, running: true, last: Date.now() };
   ensureTick();
@@ -250,7 +258,7 @@ function ensureTick() {
   timerTick = setInterval(() => {
     const t = S.gui.timer;
     const g = DB.game;
-    if (!t || !g || g.phase !== 'debate') { clearInterval(timerTick); timerTick = 0; return; }
+    if (!t || !g || g.phase !== 'clues') { clearInterval(timerTick); timerTick = 0; return; }
     if (!t.running) return;
     const now = Date.now();
     const before = Math.ceil(t.left);
@@ -269,9 +277,9 @@ function ensureTick() {
       if (after === 10) { render(); return; }
     }
     const txt = document.getElementById('timer-txt');
-    const ring = document.getElementById('timer-ring');
+    const bar = document.getElementById('timer-bar');
     if (txt) txt.textContent = `${Math.floor(after / 60)}:${String(after % 60).padStart(2, '0')}`;
-    if (ring) { const C = 2 * Math.PI * 52; ring.setAttribute('stroke-dashoffset', (C * (1 - t.left / t.total)).toFixed(1)); }
+    if (bar) bar.style.width = `${((t.left / t.total) * 100).toFixed(1)}%`;
   }, 200);
 }
 
@@ -381,16 +389,60 @@ function prepareResume() {
   gui.tallyGo = true;
   gui.tieMode = false;
   gui.tieSel = [];
-  if (g.phase === 'debate' && g.options.timer && !gui.timer) gui.timer = { total: g.options.timer, left: g.options.timer, running: false, last: Date.now() };
+  if (g.phase === 'clues' && !gui.timer) gui.timer = idleTimer(g);
 }
+
+/* ---------- Appareil photo (photo de profil) ---------- */
+
+const PHOTO_SIZE = 256;
+const cameraOpen = () => !!S.modal && S.modal.type === 'camera';
+
+/** Après chaque rendu : la caméra ne tourne que si sa fenêtre est affichée. */
+function syncCamera() {
+  if (!cameraOpen()) { Cam.stopCamera(); return; }
+  if (S.modal.step === 'live' || S.modal.step === 'shot') Cam.attachCamera(document.getElementById('cam-video'));
+}
+
+async function openCamera(facing) {
+  const many = cameraOpen() ? !!S.modal.many : false;
+  S.modal = { type: 'camera', step: 'wait', facing, mirror: facing === 'user', many, shot: '', error: '', denied: false, canSettings: !!(native && native.openAppSettings) };
+  render();
+  try {
+    const cam = await Cam.startCamera(facing);
+    if (!cameraOpen()) { Cam.stopCamera(); return; }
+    S.modal = { ...S.modal, step: 'live', mirror: cam.mirror };
+    render();
+    const n = await Cam.countCameras();
+    if (cameraOpen() && S.modal.many !== n > 1) { S.modal = { ...S.modal, many: n > 1 }; render(); }
+  } catch (err) {
+    if (err && err.name === 'Cancelled') return;
+    Cam.stopCamera();
+    if (!cameraOpen()) return;
+    S.modal = { ...S.modal, step: 'error', ...Cam.cameraProblem(err) };
+    S.modal.error = S.modal.text;
+    render();
+  }
+}
+
+// Appli mise en arrière-plan : on éteint la caméra. Au retour, l'aperçu reprend tout seul.
+// (Pendant la question d'autorisation d'Android, l'ouverture est simplement en attente : on n'y touche pas.)
+document.addEventListener('visibilitychange', () => {
+  if (!cameraOpen()) return;
+  const step = S.modal.step;
+  if (document.hidden) {
+    if (step === 'live' || step === 'shot') Cam.stopCamera();
+  } else if (step === 'live' && !Cam.cameraStream()) {
+    openCamera(S.modal.facing);
+  }
+});
 
 /* ---------- Profils ---------- */
 
 function saveProfile() {
   const d = S.draft;
   if (!d) return;
-  const name = d.name.trim().replace(/\s+/g, ' ');
-  if (!name) { d.error = 'Donne un prénom ou un surnom.'; return; }
+  // Champ laissé vide : le joueur garde le nom indicatif (« Joueur 3 »).
+  const name = d.name.trim().replace(/\s+/g, ' ') || d.fallback;
   const clash = DB.profiles.find((p) => p.id !== d.id && norm(p.name) === norm(name));
   if (clash) { d.error = `« ${clash.name} » existe déjà : choisis un autre nom.`; return; }
   if (d.id) {
@@ -404,24 +456,6 @@ function saveProfile() {
   save('profiles');
   S.draft = null;
   back();
-}
-
-function readSquare(file, size) {
-  return new Promise((resolve, reject) => {
-    const url = URL.createObjectURL(file);
-    const img = new Image();
-    img.onload = () => {
-      try {
-        const side = Math.min(img.naturalWidth, img.naturalHeight);
-        const c = document.createElement('canvas');
-        c.width = c.height = size;
-        c.getContext('2d').drawImage(img, (img.naturalWidth - side) / 2, (img.naturalHeight - side) / 2, side, side, 0, 0, size, size);
-        resolve(c.toDataURL('image/jpeg', 0.82));
-      } catch (e) { reject(e); } finally { URL.revokeObjectURL(url); }
-    };
-    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('image illisible')); };
-    img.src = url;
-  });
 }
 
 /* ---------- Données ---------- */
@@ -487,18 +521,43 @@ const ACT = {
   /* Profils */
   'profile-new'(d) {
     if (DB.profiles.length >= 60) { toast('60 profils, c’est le maximum.'); return; }
-    S.draft = { id: null, name: '', photo: '', error: '', then: d.then || '', ...suggestLook(DB.profiles) };
+    S.draft = { id: null, name: '', fallback: nextDefaultName(), photo: '', error: '', then: d.then || '', ...suggestLook(DB.profiles) };
     go('profile');
   },
   'profile-edit'(d) {
     const p = profileById(d.id);
     if (!p) return;
-    S.draft = { id: p.id, name: p.name, color: p.color, face: p.face, photo: p.photo || '', error: '', then: '' };
+    // Un nom par défaut (« Joueur 3 ») n'est qu'une indication : le champ s'ouvre vide, prêt à recevoir le vrai nom.
+    const auto = isDefaultName(p.name);
+    S.draft = { id: p.id, name: auto ? '' : p.name, fallback: auto ? p.name : nextDefaultName(p.id), color: p.color, face: faceId(p.face), photo: p.photo || '', error: '', then: '' };
     go('profile');
   },
   'draft-color'(d) { S.draft.color = d.id; },
   'draft-face'(d) { S.draft.face = d.id; S.draft.photo = ''; },
   'draft-photo-clear'() { S.draft.photo = ''; },
+  'camera-open'() { if (S.draft) openCamera('user'); return false; },
+  'camera-flip'() { if (cameraOpen()) openCamera(S.modal.facing === 'user' ? 'environment' : 'user'); return false; },
+  'camera-retry'() { if (cameraOpen()) openCamera(S.modal.facing); return false; },
+  'camera-settings'() { if (native && native.openAppSettings) { try { native.openAppSettings(); } catch (e) { /* sans gravité */ } } S.modal = null; },
+  'camera-shoot'() {
+    if (!cameraOpen() || S.modal.step !== 'live') return false;
+    const url = Cam.snapshot(document.getElementById('cam-video'), PHOTO_SIZE, S.modal.mirror);
+    if (!url) { toast('L’image arrive : réessaie dans une seconde.'); return true; }
+    S.modal = { ...S.modal, step: 'shot', shot: url };
+    sfx.flip();
+    buzz(20);
+    return true;
+  },
+  'camera-retake'() {
+    if (!cameraOpen()) return false;
+    if (!Cam.cameraStream()) { openCamera(S.modal.facing); return false; }
+    S.modal = { ...S.modal, step: 'live', shot: '' };
+    return true;
+  },
+  'camera-keep'() {
+    if (cameraOpen() && S.modal.shot && S.draft) S.draft.photo = S.modal.shot;
+    S.modal = null;
+  },
   'profile-save'() { saveProfile(); },
   'profile-delete'() {
     const p = profileById(S.draft && S.draft.id);
@@ -563,11 +622,21 @@ const ACT = {
     return true;
   },
 
-  /* Partie : indices et débat */
-  'next-speaker'() { play((g) => E.nextSpeaker(g)); sfx.tap(); },
-  'prev-speaker'() { play((g) => E.prevSpeaker(g)); S.dir = 'back'; S.gui.clue = ''; },
+  /* Partie : tour de parole */
+  'clue-edit'(d) {
+    const g = DB.game, i = Number(d.i);
+    if (!g || g.phase !== 'clues' || !g.options.notes) return;
+    S.gui.clue = E.clueOf(g, i);
+    S.gui.error = '';
+    S.modal = { type: 'clue', i };
+  },
+  'clue-clear'() {
+    const m = S.modal;
+    S.modal = null;
+    if (m && m.type === 'clue') play((g) => E.clearClue(g, m.i));
+  },
   'open-vote'() { play((g) => E.openVote(g)); },
-  'back-to-debate'() { play((g) => E.backToDebate(g)); S.dir = 'back'; },
+  'back-to-talk'() { play((g) => E.backToTalk(g)); S.dir = 'back'; },
   'timer-toggle'() { const t = S.gui.timer; if (t) { t.running = !t.running; t.last = Date.now(); ensureTick(); } },
   'timer-reset'() { const t = S.gui.timer; if (t) startTimer(t.total); },
 
@@ -606,7 +675,12 @@ const ACT = {
   /* Partie : révélation */
   'skip-guess'() { play((g) => E.skipGuess(g)); sfx.bad(); },
   'override-guess'() { play((g) => E.overrideGuess(g)); },
-  'after-reveal'() { play((g) => E.continueAfterReveal(g)); },
+  'after-reveal'() {
+    const before = DB.game;
+    const g = play((x) => E.continueAfterReveal(x));
+    // Après un départ, l'ordre de parole a pu être retiré au sort : on le dit, pour que personne ne s'étonne.
+    if (g.phase === 'clues' && g.round === before.round && before.order.filter((i) => g.players[i].alive).join() !== g.order.join()) toast('Nouvel ordre de parole tiré au sort.');
+  },
 
   /* Partie : menu */
   'game-menu'() { S.modal = { type: 'menu' }; },
@@ -691,15 +765,15 @@ const IN = {
 
 const FORMS = {
   profile() { saveProfile(); },
-  clue(form) {
-    const g = DB.game;
-    const check = E.checkClue(g, S.gui.clue);
+  clue() {
+    const g = DB.game, m = S.modal;
+    if (!g || !m || m.type !== 'clue') return;
+    const check = E.checkClue(g, S.gui.clue, m.i);
     if (!check.ok) { S.gui.error = check.error; buzz(30); return; }
-    play((x) => E.nextSpeaker(x, check.text));
+    play((x) => E.setClue(x, m.i, check.text));
+    S.modal = null;
     S.gui.clue = '';
     S.gui.error = '';
-    const input = form.querySelector('input');
-    if (input) input.value = '';
     sfx.tap();
   },
   guess() {
@@ -730,10 +804,6 @@ const FORMS = {
 };
 
 const FILES = {
-  photo(file) {
-    if (!file || !S.draft) return;
-    readSquare(file, 192).then((url) => { if (S.draft) { S.draft.photo = url; render(); } }, () => { toast('Impossible de lire cette image.'); });
-  },
   import(file) {
     if (!file) return;
     const reader = new FileReader();
@@ -822,10 +892,12 @@ function boot() {
     DB.game = null;
     save('game');
   }
+  // Les dessins des personnages sont déclarés une fois pour toute la page.
+  if (!document.getElementById('av-sprite')) document.body.insertAdjacentHTML('afterbegin', avatarSprite());
   applyTheme();
   render();
   document.documentElement.classList.add('ready');
 }
 
-window.__dj = { S, DB, E, render };
+window.__dj = { S, DB, E, Cam, render };
 boot();

@@ -4,8 +4,9 @@ import { loadDb, persist } from './store.js';
 import { computeStats } from './stats.js';
 import { CATEGORIES, CUSTOM_CAT, buildPool } from './words/index.js';
 import * as E from './engine.js';
+import { norm } from './text.js';
 
-export const APP_VERSION = '2.0.0';
+export const APP_VERSION = '2.1.0';
 export const TIMER_CHOICES = [0, 60, 120, 180, 300];
 
 export const DB = loadDb();
@@ -73,6 +74,16 @@ export function back() {
 /* ---------- Sélecteurs ---------- */
 
 export const profileById = (id) => DB.profiles.find((p) => p.id === id) || null;
+
+/** « Joueur 3 » : un nom donné par défaut, pas un nom choisi. */
+export const isDefaultName = (name) => /^Joueur \d{1,3}$/.test(String(name || '').trim());
+
+/** Premier « Joueur N » encore libre (en ignorant le profil en cours de modification). */
+export function nextDefaultName(exceptId = null) {
+  const taken = new Set(DB.profiles.filter((p) => p.id !== exceptId).map((p) => norm(p.name)));
+  for (let n = 1; n < 1000; n++) if (!taken.has(norm(`Joueur ${n}`))) return `Joueur ${n}`;
+  return 'Joueur';
+}
 
 /** Apparence à afficher pour un joueur de partie ou d'historique : le profil vivant s'il existe encore. */
 export const lookOf = (player) => profileById(player.id) || player;

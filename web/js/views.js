@@ -3,7 +3,7 @@
 
 import { escapeHtml as esc } from './text.js';
 import { icon, roleMark, brandMark } from './icons.js';
-import { avatar, COLORS, FACES } from './avatars.js';
+import { avatar, COLORS, FACES, faceId } from './avatars.js';
 import { CATEGORIES, CUSTOM_CAT, LEVELS, TOTAL_PAIRS, categoryName } from './words/index.js';
 import * as E from './engine.js';
 import { leaderboard, awards, winRate, average, emptyStats } from './stats.js';
@@ -90,7 +90,7 @@ export function players() {
   const body = list.length
     ? `<p class="lead">Les profils sont gardés d’une partie à l’autre, avec leurs scores.</p>
        <div class="panel list">${list.map((p, i) => `<button class="row" data-act="go" data-to="player" data-id="${p.id}" ${st(Math.min(i, 10))}>${avatar(p, 's44')}<span class="grow"><span class="name">${esc(p.name)}</span><span class="meta">${statLine(all[p.id])}</span></span>${icon('next', 20)}</button>`).join('')}</div>`
-    : `<div class="empty">${avatar({ color: 'soleil', face: 'loup' }, 's96')}<h2>Personne à table pour l’instant</h2><p>Crée un profil par joueur : prénom, couleur, déguisement ou photo. Ils seront là à chaque partie.</p></div>`;
+    : `<div class="empty">${avatar({ color: 'soleil', face: 'agent' }, 's96')}<h2>Personne à table pour l’instant</h2><p>Crée un profil par joueur : prénom, couleur, personnage ou photo. Ils seront là à chaque partie.</p></div>`;
   return `${topBar('Joueurs')}<div class="scroll">${body}</div><div class="dock"><button class="btn sun block" data-act="profile-new">${icon('plus', 20)}Ajouter un joueur</button></div>`;
 }
 
@@ -98,37 +98,59 @@ export function profile() {
   const d = S.draft;
   if (!d) return topBar('Profil', { back: true }) + '<div class="scroll"></div>';
   const editing = !!d.id;
-  const colors = COLORS.map((c) => `<button class="swatch${d.color === c.id ? ' on' : ''}" style="--c:${c.hex}" data-act="draft-color" data-id="${c.id}" aria-label="Couleur ${c.id}" aria-pressed="${d.color === c.id}">${d.color === c.id ? icon('check', 18) : ''}</button>`).join('');
-  const faces = FACES.map((f) => `<button class="facebtn${!d.photo && d.face === f.id ? ' on' : ''}" data-act="draft-face" data-id="${f.id}" aria-label="${esc(f.name)}" aria-pressed="${d.face === f.id}">${avatar({ color: d.color, face: f.id }, 's56')}</button>`).join('');
+  const colors = COLORS.map((c) => `<button class="swatch${d.color === c.id ? ' on' : ''}" style="--c:${c.hex}" data-act="draft-color" data-id="${c.id}" aria-label="${c.name}" aria-pressed="${d.color === c.id}">${d.color === c.id ? icon('check', 18) : ''}</button>`).join('');
+  const mine = faceId(d.face);
+  const faces = FACES.map((f) => `<button class="facebtn${!d.photo && mine === f.id ? ' on' : ''}" data-act="draft-face" data-id="${f.id}" aria-label="${esc(f.name)}" aria-pressed="${!d.photo && mine === f.id}">${avatar({ color: d.color, face: f.id }, 's56')}</button>`).join('');
   return `${topBar(editing ? 'Modifier le profil' : 'Nouveau joueur', { back: true, right: editing ? `<button class="ibtn" data-act="profile-delete" aria-label="Supprimer ce joueur">${icon('trash')}</button>` : '' })}
 <div class="scroll">
   <div class="preview">${avatar(d, 's120')}</div>
   <form class="panel" data-form="profile" novalidate>
     <label class="lbl" for="pf-name">Prénom ou surnom</label>
-    <input class="field" id="pf-name" data-in="draft-name" value="${esc(d.name)}" maxlength="16" autocomplete="off" autocapitalize="words" spellcheck="false" enterkeyhint="done" placeholder="Léa, Tonton Marc…">
-    ${d.error ? `<p class="err" role="alert">${esc(d.error)}</p>` : ''}
+    <input class="field" id="pf-name" data-in="draft-name" value="${esc(d.name)}" maxlength="16" autocomplete="off" autocapitalize="words" spellcheck="false" enterkeyhint="done" placeholder="${esc(d.fallback)}">
+    ${d.error ? `<p class="err" role="alert">${esc(d.error)}</p>` : `<p class="hint">Champ vide : ce sera « ${esc(d.fallback)} ».</p>`}
   </form>
   <div class="panel">
     <h3>Couleur</h3>
     <div class="swatches">${colors}</div>
   </div>
   <div class="panel">
-    <h3>Photo</h3>
-    <p class="hint">${d.photo ? 'La photo remplace le déguisement.' : 'Facultatif : une photo à la place du déguisement.'}</p>
-    <div class="photo-btns">
-      <label class="btn well sm" for="pf-pick">${icon('image', 20)}Galerie</label>
-      <label class="btn well sm" for="pf-shot">${icon('camera', 20)}Appareil photo</label>
-      ${d.photo ? `<button class="btn well sm" type="button" data-act="draft-photo-clear">${icon('close', 20)}Retirer</button>` : ''}
-    </div>
-    <input class="hid" type="file" id="pf-pick" accept="image/*" data-file="photo">
-    <input class="hid" type="file" id="pf-shot" accept="image/*" capture="user" data-file="photo">
+    <h3>Personnage</h3>
+    <div class="faces">${faces}</div>
   </div>
   <div class="panel">
-    <h3>Déguisement</h3>
-    <div class="faces">${faces}</div>
+    <h3>Ou une photo</h3>
+    <p class="hint">${d.photo ? 'La photo remplace le personnage. Elle reste sur ce téléphone.' : 'Un selfie à la place du personnage. La photo reste sur ce téléphone.'}</p>
+    <div class="photo-btns">
+      <button class="btn well sm" type="button" data-act="camera-open">${icon('camera', 20)}${d.photo ? 'Refaire la photo' : 'Prendre une photo'}</button>
+      ${d.photo ? `<button class="btn well sm" type="button" data-act="draft-photo-clear">${icon('close', 20)}Retirer la photo</button>` : ''}
+    </div>
   </div>
 </div>
 <div class="dock"><button class="btn sun block" data-act="profile-save">${editing ? 'Enregistrer' : 'Créer le joueur'}</button></div>`;
+}
+
+/** Appareil photo intégré : aperçu carré dans une fenêtre de taille moyenne, jamais en plein écran. */
+export function cameraDialog(m) {
+  const live = m.step === 'live', shot = m.step === 'shot', wait = m.step === 'wait', error = m.step === 'error';
+  const flip = (live || wait) && m.many
+    ? `<button class="camflip" type="button" data-act="camera-flip" aria-label="${m.facing === 'user' ? 'Passer à la caméra arrière' : 'Passer à la caméra avant'}"${wait ? ' disabled' : ''}>${icon('swap', 22)}</button>` : '';
+  const msg = wait ? '<div class="cam-msg"><div class="dots wait" aria-hidden="true"><i></i><i></i><i></i></div><span>Ouverture de l’appareil photo…</span></div>'
+    : error ? `<div class="cam-msg">${icon('camera', 40)}<span role="alert">${esc(m.error)}</span></div>` : '';
+  const btns = error
+    ? `${m.denied && m.canSettings ? '<button class="link" type="button" data-act="camera-settings">Ouvrir les réglages de l’appli</button>' : ''}
+       <div class="dlg-btns"><button class="btn well" type="button" data-act="camera-retry">Réessayer</button><button class="btn ink" type="button" data-act="close-modal">Choisir un personnage</button></div>`
+    : shot
+      ? '<div class="dlg-btns"><button class="btn well" type="button" data-act="camera-retake">Reprendre</button><button class="btn ink" type="button" data-act="camera-keep">Garder</button></div>'
+      : `<div class="dlg-btns"><button class="btn well" type="button" data-act="close-modal">Annuler</button><button class="btn ink" type="button" data-act="camera-shoot"${live ? '' : ' disabled'}>${icon('camera', 20)}Prendre</button></div>`;
+  return `<div class="dialog cam" role="dialog" aria-label="Photo de profil">
+  <h2>${shot ? 'On la garde ?' : 'Photo de profil'}</h2>
+  <div class="camframe is-${m.step}${m.mirror ? ' mirror' : ''}">
+    <video id="cam-video" autoplay playsinline muted></video>
+    <img class="camshot" src="${shot ? m.shot : 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=='}" alt="${shot ? 'Photo prise' : ''}">
+    ${msg}${flip}
+  </div>
+  ${btns}
+</div>`;
 }
 
 /* ---------- Préparation d'une partie ---------- */
@@ -137,7 +159,7 @@ export function setup() {
   const s = S.setup;
   const n = s.players.length;
   if (!DB.profiles.length) {
-    return `${topBar('Qui joue ?', { back: true })}<div class="scroll"><div class="empty">${avatar({ color: 'menthe', face: 'chapeau' }, 's96')}<h2>Il faut des joueurs</h2><p>Crée au moins ${E.MIN_PLAYERS} profils pour lancer une partie.</p></div></div>
+    return `${topBar('Qui joue ?', { back: true })}<div class="scroll"><div class="empty">${avatar({ color: 'menthe', face: 'renard' }, 's96')}<h2>Il faut des joueurs</h2><p>Crée au moins ${E.MIN_PLAYERS} profils pour lancer une partie.</p></div></div>
 <div class="dock"><button class="btn sun block" data-act="profile-new" data-then="setup">${icon('plus', 20)}Créer un joueur</button></div>`;
   }
   const tiles = DB.profiles.map((p) => {
@@ -198,7 +220,7 @@ export function options() {
   <div class="panel">
     <h3>Chrono du débat</h3>
     <div class="chips">${timers}</div>
-    <button class="rowbtn switchrow" data-act="toggle-notes" role="switch" aria-checked="${s.notes}"><span class="grow"><b>Noter les indices</b><span>On tape chaque indice : l’appli refuse les répétitions et garde la liste sous les yeux.</span></span><i class="switch${s.notes ? ' on' : ''}"></i></button>
+    <button class="rowbtn switchrow" data-act="toggle-notes" role="switch" aria-checked="${s.notes}"><span class="grow"><b>Noter les indices</b><span>Touche un joueur pour noter son mot : l’appli refuse les répétitions et garde la liste sous les yeux.</span></span><i class="switch${s.notes ? ' on' : ''}"></i></button>
   </div>
 </div>
 <div class="dock"><button class="btn sun lg block" data-act="start-game"${info.total ? '' : ' disabled'}>Distribuer les cartes</button></div>`;
@@ -374,7 +396,7 @@ export function rules() {
   ].map(([r, n, t]) => `<div class="rule-role ${r}">${roleMark(r, 52)}<span class="grow"><b>${n}</b><span>${t}</span></span></div>`).join('');
   const steps = [
     ['La distribution', 'Chacun son tour prend le téléphone, choisit une carte et lit son mot en cachette.'],
-    ['Les indices', 'Dans l’ordre affiché, chacun dit un seul mot en rapport avec le sien. Mr. White ne parle jamais en premier, et un indice déjà donné ne se répète pas.'],
+    ['Les indices', 'L’appli affiche l’ordre de parole du tour. Chacun dit un seul mot en rapport avec le sien. Mr. White ne parle jamais en premier, et un indice déjà donné ne se répète pas.'],
     ['Le débat', 'On discute librement : qui a un mot bizarre ? Qui est resté trop vague ?'],
     ['Le vote', 'À main levée ou en secret sur le téléphone. Le joueur le plus désigné est éliminé et son rôle est révélé.'],
     ['Et on recommence', 'Nouveau tour d’indices avec les survivants, jusqu’à la victoire d’un camp.'],

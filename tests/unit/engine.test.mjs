@@ -35,9 +35,10 @@ function deal(g, rng) {
   return g;
 }
 
+/** Le tour de parole : rien à valider joueur par joueur. Si la prise de notes est active, on note tout le monde. */
 function talk(g) {
-  let n = 0;
-  while (g.phase === 'clues') g = E.nextSpeaker(g, g.options.notes ? `indice ${g.round}-${n++}-${g.speakIdx}` : undefined);
+  assert.equal(g.phase, 'clues');
+  if (g.options.notes) for (const i of g.order) g = E.setClue(g, i, `indice ${g.round}-${i}`);
   return g;
 }
 
@@ -110,7 +111,7 @@ test('distribution : une carte par joueur, dans l’ordre, sans doublon', () => 
   assert.equal(E.currentDealer(g), 1);
   assert.throws(() => E.pickCard(g, 4), /déjà prise/);
   assert.throws(() => E.pickCard(g, 99), E.GameError);
-  assert.throws(() => E.nextSpeaker(g), /impossible/);
+  assert.throws(() => E.openVote(g), /impossible/);
   g = deal(g, rng);
   assert.equal(g.phase, 'clues');
   assert.equal(g.round, 1);
@@ -175,45 +176,72 @@ test('le premier orateur tourne : personne n’ouvre deux tours avant les autres
   }
 });
 
-test('indices : retour arrière et passage au débat', () => {
+test('tour de parole : un seul écran, le vote s’ouvre directement et on peut y revenir', () => {
   const rng = seeded(5);
   let g = deal(E.createGame(setup(4), rng), rng);
-  const first = E.currentSpeaker(g);
-  g = E.nextSpeaker(g);
-  assert.notEqual(E.currentSpeaker(g), first);
-  g = E.prevSpeaker(g);
-  assert.equal(E.currentSpeaker(g), first);
-  g = E.prevSpeaker(g);
-  assert.equal(g.speakIdx, 0);
-  g = talk(g);
-  assert.equal(g.phase, 'debate');
-  g = E.prevSpeaker(g);
   assert.equal(g.phase, 'clues');
-  assert.equal(g.speakIdx, g.order.length - 1);
+  assert.equal(g.order.length, 4);
+  assert.ok(!('speakIdx' in g), 'plus de curseur de parole');
+  assert.throws(() => E.setClue(g, g.order[0], 'Chaud'), /pas activée/);
+  g = E.openVote(g);
+  assert.equal(g.phase, 'vote');
+  g = E.backToTalk(g);
+  assert.equal(g.phase, 'clues');
+  assert.equal(g.vote, null);
 });
 
-test('prise de notes : indice obligatoire, sans répétition de toute la partie', () => {
+test('prise de notes : facultative, dans n’importe quel ordre, sans répétition de toute la partie', () => {
   const rng = seeded(9);
   let g = deal(E.createGame(setup(5, { options: { vote: 'open', timer: 0, notes: true } }), rng), rng);
-  assert.throws(() => E.nextSpeaker(g, '  '), /Écris/);
-  assert.throws(() => E.nextSpeaker(g, 'x'.repeat(31)), /30/);
-  g = E.nextSpeaker(g, '  Chaud ');
-  assert.equal(g.clues[0].text, 'Chaud');
-  assert.throws(() => E.nextSpeaker(g, 'chauds'), /déjà été dit/);
-  assert.throws(() => E.nextSpeaker(g, 'CHAUD'), /déjà été dit/);
-  g = E.nextSpeaker(g, 'Tasse');
-  g = E.prevSpeaker(g);
-  assert.equal(g.clues.length, 1, 'l’indice annulé est retiré');
-  g = E.nextSpeaker(g, 'Tasse');
-  g = E.nextSpeaker(g, 'Matin');
-  g = E.nextSpeaker(g, 'Noir');
-  g = E.nextSpeaker(g, 'Sucre');
-  assert.equal(g.phase, 'debate');
+  const [a, b, c, d, e] = g.order;
+  assert.throws(() => E.setClue(g, c, '  '), /Écris/);
+  assert.throws(() => E.setClue(g, c, 'x'.repeat(31)), /30/);
+  g = E.setClue(g, c, '  Chaud ');
+  assert.equal(E.clueOf(g, c), 'Chaud');
+  assert.throws(() => E.setClue(g, a, 'chauds'), /déjà été dit/);
+  assert.throws(() => E.setClue(g, a, 'CHAUD'), /déjà été dit/);
+  g = E.setClue(g, a, 'Tasse');
+  g = E.setClue(g, a, 'Tasses');
+  assert.equal(g.clues.length, 2, 'corriger un indice ne le compte pas deux fois');
+  assert.equal(E.clueOf(g, a), 'Tasses');
+  g = E.setClue(g, c, 'chaud');
+  assert.equal(E.clueOf(g, c), 'chaud', 'un joueur peut reprendre son propre indice');
+  g = E.clearClue(g, a);
+  assert.equal(E.clueOf(g, a), '');
+  assert.equal(g.clues.length, 1);
+  g = E.setClue(g, e, 'Tasse');
+  // Personne n'est obligé d'être noté : b et d n'ont rien, le vote s'ouvre quand même.
+  assert.equal(E.clueOf(g, b), '');
+  assert.equal(E.clueOf(g, d), '');
   const victim = roleIdx(g, 'civil')[0];
   g = E.eliminateByShow(E.openVote(g), victim);
+  assert.throws(() => E.setClue(g, a, 'Matin'), /impossible/);
   g = E.continueAfterReveal(g, rng);
   assert.equal(g.round, 2);
-  assert.throws(() => E.nextSpeaker(g, 'Tasse'), /déjà été dit/, 'un indice du tour 1 reste interdit au tour 2');
+  assert.throws(() => E.setClue(g, victim, 'Sucre'), /plus en jeu/);
+  const alive = g.order[0];
+  assert.throws(() => E.setClue(g, alive, 'Tasse'), /déjà été dit/, 'un indice du tour 1 reste interdit au tour 2');
+  g = E.setClue(g, alive, 'Sucre');
+  assert.equal(g.clues.filter((x) => x.round === 2).length, 1);
+});
+
+test('partie sauvegardée par la version 2.0 : le débat devient le tour de parole', () => {
+  const rng = seeded(11);
+  let g = deal(E.createGame(setup(5), rng), rng);
+  const old = JSON.parse(JSON.stringify(g));
+  old.phase = 'debate';
+  old.speakIdx = old.order.length;
+  g = E.upgradeGame(old);
+  assert.equal(g.phase, 'clues');
+  assert.ok(!('speakIdx' in g));
+  g = E.openVote(g);
+  assert.equal(g.phase, 'vote');
+  // partie interrompue pendant la révélation d'un départ
+  const mid = JSON.parse(JSON.stringify(E.playerLeaves(E.backToTalk(g), g.order[1])));
+  mid.resume = { phase: 'debate', spoken: [] };
+  const up = E.continueAfterReveal(E.upgradeGame(mid), rng);
+  assert.equal(up.phase, 'clues');
+  assert.equal(up.order.length, 4);
 });
 
 /* ---------- Votes ---------- */
@@ -225,8 +253,8 @@ test('vote à main levée : élimination, puis victoire des Civils', () => {
   assert.throws(() => E.eliminateByShow(g, 0), /impossible/);
   g = E.openVote(g);
   assert.throws(() => E.castBallot(g, g.order[0], g.order[1]), /main levée/);
-  g = E.backToDebate(g);
-  assert.equal(g.phase, 'debate');
+  g = E.backToTalk(g);
+  assert.equal(g.phase, 'clues');
   g = E.openVote(g);
   const under = roleIdx(g, 'under')[0];
   g = E.eliminateByShow(g, under);
@@ -348,7 +376,7 @@ test('vote secret : dépouillement, égalité, revote, tirage', () => {
   assert.equal(g.phase, 'tally');
   assert.deepEqual(g.vote.top.slice().sort(), [a, b].sort());
   assert.equal(g.vote.counts[a], 3);
-  assert.throws(() => E.backToDebate(g), /impossible/);
+  assert.throws(() => E.backToTalk(g), /impossible/);
   g = E.resolveTally(g, rng);
   assert.equal(g.phase, 'tiebreak');
   g = E.startRevote(g);
@@ -356,7 +384,7 @@ test('vote secret : dépouillement, égalité, revote, tirage', () => {
   assert.deepEqual(g.vote.candidates.slice().sort(), [a, b].sort());
   const c = q[2];
   assert.throws(() => E.castBallot(g, q[0], c), /ne peut pas recevoir/);
-  assert.throws(() => E.backToDebate(g), /déjà commencé/);
+  assert.throws(() => E.backToTalk(g), /déjà commencé/);
   // revote : a vote b (obligé), b vote a, puis 2-2 → encore égalité
   const second = [b, a, a, b, a, b];
   q.forEach((voter, i) => { g = E.castBallot(g, voter, second[i]); });
@@ -380,36 +408,55 @@ test('vote secret : majorité simple', () => {
 
 /* ---------- Départ d'un joueur ---------- */
 
-test('un joueur quitte pendant les indices : on reprend au bon orateur', () => {
+test('un joueur quitte pendant le tour de parole : l’ordre est conservé, sans lui', () => {
   const rng = seeded(81);
   let g = deal(E.createGame(setup(7), rng), rng);
   assert.throws(() => E.playerLeaves(E.createGame(setup(7), rng), 0), /impossible/);
-  g = E.nextSpeaker(E.nextSpeaker(g));
-  const speaker = E.currentSpeaker(g);
-  const leaver = g.order.find((i) => i !== speaker && g.players[i].role === 'civil' && g.order.indexOf(i) > g.speakIdx);
+  const before = g.order.slice();
+  const leaver = g.order.slice(1).find((i) => g.players[i].role === 'civil');
   g = E.playerLeaves(g, leaver);
   assert.equal(g.phase, 'reveal');
   assert.equal(E.awaitingGuess(g), false);
   g = E.continueAfterReveal(g, rng);
   assert.equal(g.phase, 'clues');
   assert.equal(g.round, 1);
-  assert.equal(E.currentSpeaker(g), speaker);
-  assert.ok(!g.order.includes(leaver));
+  assert.deepEqual(g.order, before.filter((i) => i !== leaver));
   assert.throws(() => E.playerLeaves(g, leaver), /plus en jeu/);
-  // l'orateur courant s'en va : le suivant prend la parole
-  const next = g.order[g.speakIdx + 1];
-  g = E.continueAfterReveal(E.playerLeaves(g, speaker), rng);
-  assert.equal(E.currentSpeaker(g), next);
 });
 
-test('un joueur quitte pendant un vote secret : le vote est annulé, retour au débat', () => {
+test('celui qui ouvre le tour s’en va : nouvel ordre tiré au sort, jamais Mr. White en premier', () => {
+  for (let seed = 1; seed <= 300; seed++) {
+    const rng = seeded(7000 + seed);
+    let g = deal(E.createGame(setup(8, { undercover: 1, white: 2 }), rng), rng);
+    const opener = g.order[0];
+    g = E.playerLeaves(g, opener);
+    if (E.afterReveal(g) === 'end') continue;
+    g = E.continueAfterReveal(g, rng);
+    assert.equal(g.phase, 'clues');
+    assert.ok(!g.order.includes(opener));
+    assert.notEqual(g.players[g.order[0]].role, 'white', `seed ${seed}: Mr. White ouvre le tour après un départ`);
+    assert.deepEqual(g.log[g.log.length - 1].order, g.order);
+  }
+});
+
+test('celui qui ouvre le tour s’en va après un indice noté : l’ordre ne change pas', () => {
+  const rng = seeded(87);
+  let g = deal(E.createGame(setup(7, { options: { vote: 'open', timer: 0, notes: true } }), rng), rng);
+  const before = g.order.slice();
+  g = E.setClue(g, before[0], 'Chaud');
+  g = E.continueAfterReveal(E.playerLeaves(g, before[0]), rng);
+  assert.deepEqual(g.order, before.slice(1));
+  assert.throws(() => E.setClue(g, g.order[0], 'chaud'), /déjà été dit/, 'l’indice du joueur parti reste interdit');
+});
+
+test('un joueur quitte pendant un vote secret : le vote est annulé, retour au tour de parole', () => {
   const rng = seeded(83);
   let g = deal(E.createGame(setup(7, { options: { vote: 'secret', timer: 0, notes: false } }), rng), rng);
   g = E.openVote(talk(g));
   g = E.castBallot(g, g.vote.queue[0], g.vote.queue[1]);
   const leaver = roleIdx(g, 'civil')[0];
   g = E.continueAfterReveal(E.playerLeaves(g, leaver), rng);
-  assert.equal(g.phase, 'debate');
+  assert.equal(g.phase, 'clues');
   assert.equal(g.vote, null);
   g = E.openVote(g);
   assert.ok(!g.vote.queue.includes(leaver));
@@ -439,26 +486,37 @@ function playRandom(seed) {
   let g = E.createGame(setup(n, { mode, undercover: u, white: w, options }), rng);
   const order = g.cards.map((_, i) => i).sort(() => rng() - 0.5);
   for (const c of order) { g = E.pickCard(g, c); g = E.confirmCard(g, rng); }
-  let clueN = 0, steps = 0;
+  let clueN = 0, steps = 0, seenRound = 0;
   const roles = g.players.map((p) => p.role);
   assert.equal(roles.filter((r) => r !== 'civil').length, g.counts.u + g.counts.w);
   while (g.phase !== 'end') {
     assert.ok(++steps < 2000, `partie sans fin (seed ${seed}, phase ${g.phase})`);
     const alive = E.aliveIdx(g);
     if (g.phase !== 'reveal') assert.ok(alive.length >= 3, `seed ${seed}: moins de 3 joueurs en jeu en phase ${g.phase}`);
-    if (['clues', 'debate', 'vote', 'tiebreak', 'tally'].includes(g.phase) && rng() < 0.02 && alive.length > 3) {
-      g = E.playerLeaves(g, alive[Math.floor(rng() * alive.length)]);
+    if (g.phase === 'clues' && g.round !== seenRound) {
+      seenRound = g.round;
+      assert.notEqual(g.players[g.order[0]].role, 'white', `seed ${seed}: Mr. White ouvre le tour ${g.round}`);
+      assert.deepEqual(g.order.slice().sort((x, y) => x - y), alive, `seed ${seed}: l'ordre de parole ne couvre pas tous les joueurs en vie`);
+    }
+    if (['clues', 'vote', 'tiebreak', 'tally'].includes(g.phase) && rng() < 0.02 && alive.length > 3) {
+      const leaver = alive[Math.floor(rng() * alive.length)];
+      const fresh = g.phase === 'clues' && g.order[0] === leaver && !g.clues.some((c) => c.round === g.round);
+      g = E.playerLeaves(g, leaver);
+      if (fresh && E.afterReveal(g) === 'round') {
+        g = E.continueAfterReveal(g, rng);
+        assert.notEqual(g.players[g.order[0]].role, 'white', `seed ${seed}: Mr. White ouvre le tour après un départ`);
+      }
       continue;
     }
     switch (g.phase) {
-      case 'clues':
-        if (g.speakIdx === 0) assert.notEqual(g.players[E.currentSpeaker(g)].role, 'white', `seed ${seed}: Mr. White ouvre le tour`);
-        if (rng() < 0.05 && g.speakIdx > 0) g = E.prevSpeaker(g);
-        else g = E.nextSpeaker(g, g.options.notes ? `mot${seed}x${clueN++}` : undefined);
+      case 'clues': {
+        const r = rng();
+        if (g.options.notes && r < 0.6) {
+          const who = g.order[Math.floor(rng() * g.order.length)];
+          g = rng() < 0.1 ? E.clearClue(g, who) : E.setClue(g, who, `mot${seed}x${clueN++}`);
+        } else g = E.openVote(g);
         break;
-      case 'debate':
-        g = E.openVote(g);
-        break;
+      }
       case 'vote':
         if (g.options.vote === 'open') {
           const c = g.vote.candidates;

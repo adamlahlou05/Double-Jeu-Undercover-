@@ -129,7 +129,6 @@ export function createGame(setup, rng = defaultRng) {
     pendingCard: -1,
     round: 0,
     order: [],
-    speakIdx: 0,
     starters: [],
     clues: [],
     vote: null,
@@ -144,7 +143,6 @@ export function createGame(setup, rng = defaultRng) {
 
 export const aliveIdx = (g) => g.players.map((p, i) => (p.alive ? i : -1)).filter((i) => i >= 0);
 export const currentDealer = (g) => (g.phase === 'deal' ? g.dealIndex : -1);
-export const currentSpeaker = (g) => (g.phase === 'clues' && g.speakIdx < g.order.length ? g.order[g.speakIdx] : -1);
 export const currentVoter = (g) => (g.phase === 'vote' && g.options.vote === 'secret' && g.vote && g.vote.cursor < g.vote.queue.length ? g.vote.queue[g.vote.cursor] : -1);
 
 export function remaining(g) {
@@ -216,7 +214,6 @@ function chooseOrder(g, rng) {
   const n = g.players.length;
   g.order = [];
   for (let k = 0; k < n; k++) { const j = (starter + k) % n; if (g.players[j].alive) g.order.push(j); }
-  g.speakIdx = 0;
 }
 
 function beginRound(g, rng) {
@@ -227,42 +224,49 @@ function beginRound(g, rng) {
   g.log.push({ round: g.round, order: g.order.slice(), votes: [], tie: null, drawn: false, left: [], out: -1, role: '', guess: null });
 }
 
-/** Vérifie un indice saisi : non vide, pas trop long, jamais déjà donné dans la partie. */
-export function checkClue(g, text) {
+/**
+ * Vérifie un indice saisi : pas trop long, lisible, jamais déjà donné dans la partie.
+ * `by` désigne le joueur dont on note l'indice : son indice du tour en cours peut être remplacé.
+ */
+export function checkClue(g, text, by = -1) {
   const t = String(text || '').trim().replace(/\s+/g, ' ');
   if (!t) return { ok: false, error: 'Écris l’indice avant de valider.' };
   if (t.length > MAX_CLUE) return { ok: false, error: `Un indice fait ${MAX_CLUE} caractères au plus.` };
   const k = norm(t);
   if (!k) return { ok: false, error: 'Cet indice n’est pas lisible.' };
-  const dup = g.clues.find((c) => norm(c.text) === k);
+  const dup = g.clues.find((c) => norm(c.text) === k && !(c.round === g.round && c.by === by));
   if (dup) return { ok: false, error: `« ${dup.text} » a déjà été dit par ${g.players[dup.by].name}.` };
   return { ok: true, text: t };
 }
 
-/** L'orateur courant a donné son indice (texte obligatoire seulement si la prise de notes est active). */
-export function nextSpeaker(state, text) {
+/** L'indice noté pour un joueur au tour en cours, ou ''. */
+export function clueOf(g, idx) {
+  const c = g.clues.find((x) => x.round === g.round && x.by === idx);
+  return c ? c.text : '';
+}
+
+/**
+ * Note (ou corrige) l'indice d'un joueur pour le tour en cours, dans n'importe quel ordre.
+ * La prise de notes est facultative : rien n'oblige à noter tout le monde avant de voter.
+ */
+export function setClue(state, idx, text) {
   need(state, 'clues');
+  if (!state.options.notes) throw new GameError('La prise de notes n’est pas activée pour cette partie.');
+  const p = state.players[idx];
+  if (!p || !p.alive) throw new GameError('Ce joueur n’est plus en jeu.');
+  const c = checkClue(state, text, idx);
+  if (!c.ok) throw new GameError(c.error);
   const g = clone(state);
-  const by = g.order[g.speakIdx];
-  if (g.options.notes) {
-    const c = checkClue(g, text);
-    if (!c.ok) throw new GameError(c.error);
-    g.clues.push({ round: g.round, by, text: c.text });
-  }
-  g.speakIdx++;
-  if (g.speakIdx >= g.order.length) g.phase = 'debate';
+  const at = g.clues.findIndex((x) => x.round === g.round && x.by === idx);
+  if (at >= 0) g.clues[at].text = c.text; else g.clues.push({ round: g.round, by: idx, text: c.text });
   return g;
 }
 
-/** Revenir à l'orateur précédent (erreur de manipulation). Son indice noté est retiré pour être ressaisi. */
-export function prevSpeaker(state) {
-  need(state, 'clues', 'debate');
+/** Efface l'indice noté pour un joueur au tour en cours (erreur de saisie). */
+export function clearClue(state, idx) {
+  need(state, 'clues');
   const g = clone(state);
-  if (g.phase === 'debate') { g.phase = 'clues'; g.speakIdx = g.order.length; }
-  if (g.speakIdx <= 0) return g;
-  g.speakIdx--;
-  const by = g.order[g.speakIdx];
-  const at = g.clues.findIndex((c) => c.round === g.round && c.by === by);
+  const at = g.clues.findIndex((x) => x.round === g.round && x.by === idx);
   if (at >= 0) g.clues.splice(at, 1);
   return g;
 }
@@ -283,22 +287,22 @@ function newVote(g, candidates, stage) {
   };
 }
 
-/** Fin du débat : on ouvre le vote. */
+/** Tout le monde a parlé et débattu : on ouvre le vote. */
 export function openVote(state) {
-  need(state, 'debate');
+  need(state, 'clues');
   const g = clone(state);
   g.vote = newVote(g, null, 1);
   g.phase = 'vote';
   return g;
 }
 
-/** Retour du vote vers le débat, tant qu'aucun bulletin n'a été déposé. */
-export function backToDebate(state) {
+/** Retour du vote vers le tour de parole, tant qu'aucun bulletin n'a été déposé. */
+export function backToTalk(state) {
   need(state, 'vote');
   const g = clone(state);
   if (g.vote.stage !== 1 || g.vote.cursor > 0) throw new GameError('Le vote a déjà commencé.');
   g.vote = null;
-  g.phase = 'debate';
+  g.phase = 'clues';
   return g;
 }
 
@@ -486,35 +490,44 @@ function finish(g, winner, by) {
  * puis la partie reprend là où elle en était, ou se termine si un camp a gagné.
  */
 export function playerLeaves(state, idx) {
-  need(state, 'clues', 'debate', 'vote', 'tiebreak', 'tally');
+  need(state, 'clues', 'vote', 'tiebreak', 'tally');
   const g = clone(state);
   const p = g.players[idx];
   if (!p || !p.alive) throw new GameError('Ce joueur n’est plus en jeu.');
-  // On mémorise où reprendre : pendant les indices, la liste de ceux qui ont déjà parlé ;
-  // sinon retour au débat (un vote entamé est annulé, il manquerait un votant).
-  g.resume = g.phase === 'clues' ? { phase: 'clues', spoken: g.order.slice(0, g.speakIdx) } : { phase: 'debate', spoken: [] };
+  // On mémorise où l'on en était : la partie reprend toujours au tour de parole
+  // (un vote entamé est annulé, il manquerait un votant).
+  g.resume = { talking: g.phase === 'clues', opener: g.order[0] === idx };
   eliminate(g, idx, 'left');
   return g;
 }
 
 function resumeAfterLeave(g, rng) {
-  const r = g.resume || { phase: 'debate', spoken: [] };
+  const r = g.resume || { talking: false, opener: false };
   delete g.resume;
   g.order = g.order.filter((i) => g.players[i].alive);
   g.vote = null;
-  if (r.phase === 'clues') {
-    g.speakIdx = g.order.filter((i) => r.spoken.includes(i)).length;
-    // Celui qui devait ouvrir le tour est parti avant de parler : on retire au sort,
-    // pour que Mr. White ne se retrouve pas premier orateur par ricochet.
-    if (g.speakIdx === 0 && g.players[g.order[0]].role === ROLE.WHITE) {
-      chooseOrder(g, rng);
-      curLog(g).order = g.order.slice();
-    }
-    g.phase = g.speakIdx >= g.order.length ? 'debate' : 'clues';
-  } else {
-    g.speakIdx = g.order.length;
-    g.phase = 'debate';
+  // Celui qui ouvrait le tour est parti avant qu'un indice soit noté : on retire l'ordre au sort.
+  // Le tirage est fait dans tous les cas (et pas seulement si Mr. White se retrouvait premier),
+  // pour que le changement d'ordre ne trahisse personne.
+  if (r.talking && r.opener && !g.clues.some((c) => c.round === g.round)) {
+    chooseOrder(g, rng);
+    curLog(g).order = g.order.slice();
   }
+  g.phase = 'clues';
+}
+
+/**
+ * Remet à niveau une partie sauvegardée par une version précédente : le tour de parole et le débat
+ * ne font plus qu'une seule étape, sans validation joueur par joueur.
+ */
+export function upgradeGame(g) {
+  if (!g || typeof g !== 'object') return g;
+  if (g.phase === 'debate') g.phase = 'clues';
+  if (g.resume && typeof g.resume === 'object' && 'phase' in g.resume) {
+    g.resume = { talking: g.resume.phase === 'clues', opener: false };
+  }
+  delete g.speakIdx;
+  return g;
 }
 
 /* ---------- Points et résumé ---------- */

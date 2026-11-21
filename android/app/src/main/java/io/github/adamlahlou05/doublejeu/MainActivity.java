@@ -1,19 +1,22 @@
 package io.github.adamlahlou05.doublejeu;
 
+import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
-import android.provider.MediaStore;
+import android.provider.Settings;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.webkit.JavascriptInterface;
+import android.webkit.PermissionRequest;
 import android.webkit.RenderProcessGoneDetail;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
@@ -31,14 +34,13 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.core.content.FileProvider;
+import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.webkit.WebViewAssetLoader;
 import androidx.webkit.WebViewClientCompat;
 
-import java.io.File;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 
@@ -48,7 +50,8 @@ import java.nio.charset.StandardCharsets;
  * Le jeu lui-même est une page embarquée dans l'APK (dossier assets/www), affichée dans une WebView
  * et servie localement : aucune connexion n'est utilisée, l'application n'a d'ailleurs pas la
  * permission d'accéder à Internet. Cette classe apporte ce qu'une page seule ne peut pas faire :
- * sauvegarde dans des fichiers, bouton retour, photo de profil, vibrations, écran maintenu allumé.
+ * sauvegarde dans des fichiers, bouton retour, vibrations, écran maintenu allumé, et l'autorisation
+ * d'utiliser l'appareil photo pour les photos de profil (prises dans la page, jamais envoyées ailleurs).
  */
 public final class MainActivity extends ComponentActivity {
 
@@ -62,11 +65,11 @@ public final class MainActivity extends ComponentActivity {
     private int barColor = COBALT;
 
     @Nullable private ValueCallback<Uri[]> fileCallback;
-    @Nullable private Uri cameraUri;
+    @Nullable private PermissionRequest cameraRequest;
     @Nullable private volatile String pendingExport;
 
     private ActivityResultLauncher<String> pickLauncher;
-    private ActivityResultLauncher<Uri> cameraLauncher;
+    private ActivityResultLauncher<String> permissionLauncher;
     private ActivityResultLauncher<String> exportLauncher;
 
     @Override
@@ -109,8 +112,8 @@ public final class MainActivity extends ComponentActivity {
     private void registerLaunchers() {
         pickLauncher = registerForActivityResult(new ActivityResultContracts.GetContent(),
                 uri -> finishFileChooser(uri == null ? null : new Uri[] {uri}));
-        cameraLauncher = registerForActivityResult(new ActivityResultContracts.TakePicture(),
-                saved -> finishFileChooser(Boolean.TRUE.equals(saved) && cameraUri != null ? new Uri[] {cameraUri} : null));
+        permissionLauncher = registerForActivityResult(new ActivityResultContracts.RequestPermission(),
+                granted -> finishCameraRequest(Boolean.TRUE.equals(granted)));
         exportLauncher = registerForActivityResult(new ActivityResultContracts.CreateDocument("application/json"),
                 this::writeExport);
     }
@@ -161,6 +164,7 @@ public final class MainActivity extends ComponentActivity {
                 // la partie étant sauvegardée à chaque étape, on la retrouve depuis l'accueil.
                 if (view == web) {
                     finishFileChooser(null);
+                    cameraRequest = null;
                     root.removeView(view);
                     view.destroy();
                     createWebView();
@@ -172,22 +176,48 @@ public final class MainActivity extends ComponentActivity {
         web.setWebChromeClient(new WebChromeClient() {
             @Override
             public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> callback, FileChooserParams params) {
+                // Seul l'import d'une sauvegarde ouvre un sélecteur de fichiers.
                 finishFileChooser(null);
                 fileCallback = callback;
-                boolean image = false;
-                String[] types = params.getAcceptTypes();
-                if (types != null) {
-                    for (String type : types) {
-                        if (type != null && type.startsWith("image/")) image = true;
-                    }
-                }
                 try {
-                    if (image && params.isCaptureEnabled() && launchCamera()) return true;
-                    pickLauncher.launch(image ? "image/*" : "*/*");
+                    pickLauncher.launch("*/*");
                 } catch (RuntimeException e) {
                     finishFileChooser(null);
                 }
                 return true;
+            }
+
+            @Override
+            public void onPermissionRequest(PermissionRequest request) {
+                // La page demande la caméra pour une photo de profil. On n'accorde que la vidéo (jamais le micro),
+                // et uniquement à la page embarquée dans l'APK.
+                boolean video = false;
+                for (String resource : request.getResources()) {
+                    if (PermissionRequest.RESOURCE_VIDEO_CAPTURE.equals(resource)) video = true;
+                }
+                Uri origin = request.getOrigin();
+                if (!video || origin == null || !HOST.equals(origin.getHost())) {
+                    request.deny();
+                    return;
+                }
+                finishCameraRequest(false);
+                cameraRequest = request;
+                if (ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.CAMERA)
+                        == PackageManager.PERMISSION_GRANTED) {
+                    finishCameraRequest(true);
+                    return;
+                }
+                try {
+                    // Android affiche sa propre fenêtre « Autoriser Double Jeu à prendre des photos ? ».
+                    permissionLauncher.launch(Manifest.permission.CAMERA);
+                } catch (RuntimeException e) {
+                    finishCameraRequest(false);
+                }
+            }
+
+            @Override
+            public void onPermissionRequestCanceled(PermissionRequest request) {
+                if (request == cameraRequest) cameraRequest = null;
             }
         });
 
@@ -195,16 +225,17 @@ public final class MainActivity extends ComponentActivity {
         web.loadUrl(START_URL);
     }
 
-    /** Ouvre l'appareil photo du téléphone ; renvoie false s'il n'y en a pas. */
-    private boolean launchCamera() {
-        Intent probe = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-        if (probe.resolveActivity(getPackageManager()) == null) return false;
-        File dir = new File(getCacheDir(), "camera");
-        if (!dir.isDirectory() && !dir.mkdirs()) return false;
-        File photo = new File(dir, "photo.jpg");
-        cameraUri = FileProvider.getUriForFile(this, getPackageName() + ".files", photo);
-        cameraLauncher.launch(cameraUri);
-        return true;
+    /** Répond à la page qui attend la caméra : accordée (vidéo seule) ou refusée. */
+    private void finishCameraRequest(boolean granted) {
+        PermissionRequest request = cameraRequest;
+        cameraRequest = null;
+        if (request == null) return;
+        try {
+            if (granted) request.grant(new String[] {PermissionRequest.RESOURCE_VIDEO_CAPTURE});
+            else request.deny();
+        } catch (RuntimeException e) {
+            // La page a déjà abandonné sa demande : rien à faire.
+        }
     }
 
     /** La WebView attend toujours une réponse, même en cas d'annulation, sinon elle n'ouvre plus de sélecteur. */
@@ -258,6 +289,7 @@ public final class MainActivity extends ComponentActivity {
     @Override
     protected void onDestroy() {
         finishFileChooser(null);
+        finishCameraRequest(false);
         root.removeView(web);
         web.destroy();
         super.onDestroy();
@@ -330,6 +362,21 @@ public final class MainActivity extends ComponentActivity {
             } catch (RuntimeException e) {
                 // Une vibration ratée ne doit jamais gêner la partie.
             }
+        }
+
+        /** Ouvre la fiche de l'application dans les réglages d'Android, pour y autoriser l'appareil photo après un refus. */
+        @JavascriptInterface
+        public void openAppSettings() {
+            runOnUiThread(() -> {
+                try {
+                    Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                            Uri.fromParts("package", getPackageName(), null));
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    startActivity(intent);
+                } catch (RuntimeException e) {
+                    // Pas d'écran de réglages sur cet appareil : la page garde son message d'explication.
+                }
+            });
         }
 
         @JavascriptInterface

@@ -4,12 +4,12 @@
     <!-- Aucune permission réseau : l'application fonctionne entièrement hors ligne. -->
     <uses-permission android:name="android.permission.VIBRATE" />
 
-    <!-- Pour proposer « Appareil photo » lors du choix d'une photo de profil. -->
-    <queries>
-        <intent>
-            <action android:name="android.media.action.IMAGE_CAPTURE" />
-        </intent>
-    </queries>
+    <!-- Appareil photo : uniquement pour prendre une photo de profil, dans l'application.
+         L'image reste sur le téléphone (aucun accès à Internet). Le micro n'est jamais demandé. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.front" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
 
     <application
         android:allowBackup="true"
@@ -33,16 +33,6 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
-        <provider
-            android:name="androidx.core.content.FileProvider"
-            android:authorities="${applicationId}.files"
-            android:exported="false"
-            android:grantUriPermissions="true">
-            <meta-data
-                android:name="android.support.FILE_PROVIDER_PATHS"
-                android:resource="@xml/file_paths" />
-        </provider>
     </application>
 
 </manifest>
