@@ -80,6 +80,7 @@ final class Monetization implements PurchasesUpdatedListener {
     private final ConsentInformation consent;
 
     private boolean consentDone;
+    private boolean consentFailed;
     private boolean consentRunning;
     private final List<Runnable> afterConsent = new ArrayList<>();
     private boolean adsStarted;
@@ -170,7 +171,7 @@ final class Monetization implements PurchasesUpdatedListener {
         consentRunning = true;
         ConsentRequestParameters params = new ConsentRequestParameters.Builder().build();
         consent.requestConsentInfoUpdate(activity, params,
-                () -> UserMessagingPlatform.loadAndShowConsentFormIfRequired(activity, formError -> consentFinished(true)),
+                () -> UserMessagingPlatform.loadAndShowConsentFormIfRequired(activity, formError -> consentFinished(formError == null)),
                 requestError -> consentFinished(false));
     }
 
@@ -179,14 +180,24 @@ final class Monetization implements PurchasesUpdatedListener {
         // En cas d'échec (hors ligne), on réessaiera à la prochaine demande ; un consentement
         // donné lors d'une session précédente reste utilisable d'ici là.
         consentDone = done;
+        consentFailed = !done;
         publish(true);
         List<Runnable> queue = new ArrayList<>(afterConsent);
         afterConsent.clear();
         for (Runnable r : queue) r.run();
     }
 
+    /**
+     * Les pubs ne sont demandées qu'avec un consentement valable. Seule exception : la version de
+     * démonstration (identifiants de test de Google), pour pouvoir essayer le parcours avant d'avoir
+     * créé le message de consentement dans AdMob.
+     */
+    private boolean adsAllowed() {
+        return consent.canRequestAds() || (BuildConfig.ADMOB_TEST && consentFailed);
+    }
+
     private void startAds() {
-        if (!consent.canRequestAds()) {
+        if (!adsAllowed()) {
             if (showWanted) {
                 showWanted = false;
                 adResult("unavailable");
