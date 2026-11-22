@@ -1,7 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Aucune permission réseau : l'application fonctionne entièrement hors ligne. -->
+    <!-- Internet : uniquement pour les publicités et les achats (Google). Le jeu lui-même fonctionne hors ligne
+         et n'envoie rien : joueurs, scores et photos restent sur le téléphone. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.VIBRATE" />
 
     <!-- Appareil photo : uniquement pour prendre une photo de profil, dans l'application.
@@ -20,6 +23,11 @@
         android:roundIcon="@mipmap/ic_launcher"
         android:supportsRtl="true"
         android:theme="@style/Theme.DoubleJeu">
+
+        <!-- Identifiant de l'application dans AdMob (android/monetization.properties). -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="${admobAppId}" />
 
         <activity
             android:name=".MainActivity"

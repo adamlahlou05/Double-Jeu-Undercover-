@@ -2,7 +2,7 @@
 // Chaque fonction renvoie le HTML d'un écran ; aucune ne modifie l'état.
 
 import { escapeHtml as esc } from './text.js';
-import { icon, roleMark, brandMark } from './icons.js';
+import { icon, roleMark, brandMark, logoMark } from './icons.js';
 import { avatar, COLORS, FACES, faceId } from './avatars.js';
 import { CATEGORIES, CUSTOM_CAT, LEVELS, FREE_PAIRS, FREE_CATS, categoryName } from './words/index.js';
 import { shopActive, isPremium } from './shop.js';
@@ -63,7 +63,7 @@ export function home() {
   const team = quick ? quick.players.map(profileById) : [];
   return `<div class="scroll home">
   ${reserveChip()}
-  <header class="brandrow" ${st(0)}><h1 class="wordmark">Double<br>Jeu</h1>${brandMark(64)}</header>
+  <header class="brandrow" ${st(0)}><h1 class="wordmark">Double<br>Jeu</h1>${logoMark(92)}</header>
   <p class="tagline" ${st(1)}>Un mot secret, un intrus, et beaucoup de bluff.</p>
   <div class="hero" aria-hidden="true">
     <div class="c c1"><span>${esc(hero.b)}</span></div>

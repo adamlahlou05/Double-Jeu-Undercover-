@@ -66,6 +66,7 @@ public final class MainActivity extends ComponentActivity {
 
     @Nullable private ValueCallback<Uri[]> fileCallback;
     @Nullable private PermissionRequest cameraRequest;
+    @Nullable private Monetization shop;
     @Nullable private volatile String pendingExport;
 
     private ActivityResultLauncher<String> pickLauncher;
@@ -95,6 +96,8 @@ public final class MainActivity extends ComponentActivity {
 
         registerLaunchers();
         createWebView();
+        // Publicités et achats : la page est prévenue par window.DJ (la WebView peut avoir été recréée).
+        shop = new Monetization(this, script -> web.evaluateJavascript(script, null));
 
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override
@@ -284,12 +287,14 @@ public final class MainActivity extends ComponentActivity {
     protected void onResume() {
         super.onResume();
         web.onResume();
+        if (shop != null) shop.onResume();
     }
 
     @Override
     protected void onDestroy() {
         finishFileChooser(null);
         finishCameraRequest(false);
+        if (shop != null) shop.destroy();
         root.removeView(web);
         web.destroy();
         super.onDestroy();
@@ -362,6 +367,45 @@ public final class MainActivity extends ComponentActivity {
             } catch (RuntimeException e) {
                 // Une vibration ratée ne doit jamais gêner la partie.
             }
+        }
+
+        /* ----- Boutique : publicités avec récompense et achats (voir Monetization) ----- */
+
+        /** État de la boutique en JSON : produits possédés, prix, pubs de test ou non. */
+        @JavascriptInterface
+        public String shopInfo() {
+            Monetization m = shop;
+            return m == null ? "{}" : m.info();
+        }
+
+        /** Prépare une pub. La page ne l'appelle qu'après la première partie. */
+        @JavascriptInterface
+        public void adsWarmup() {
+            runOnUiThread(() -> { if (shop != null) shop.warmup(); });
+        }
+
+        /** Affiche une pub avec récompense ; le résultat revient par window.DJ.adResult. */
+        @JavascriptInterface
+        public void showRewarded() {
+            runOnUiThread(() -> {
+                if (shop != null) shop.showRewarded();
+                else web.evaluateJavascript("window.DJ&&window.DJ.adResult&&window.DJ.adResult('unavailable')", null);
+            });
+        }
+
+        @JavascriptInterface
+        public void buy(String productId) {
+            runOnUiThread(() -> { if (shop != null) shop.buy(productId); });
+        }
+
+        @JavascriptInterface
+        public void restorePurchases() {
+            runOnUiThread(() -> { if (shop != null) shop.restore(); });
+        }
+
+        @JavascriptInterface
+        public void privacyOptions() {
+            runOnUiThread(() -> { if (shop != null) shop.privacyOptions(); });
         }
 
         /** Ouvre la fiche de l'application dans les réglages d'Android, pour y autoriser l'appareil photo après un refus. */

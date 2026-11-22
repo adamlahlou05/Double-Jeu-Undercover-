@@ -1,6 +1,6 @@
 {
   "name": "double-jeu",
-  "version": "2.1.0",
+  "version": "3.0.0",
   "private": true,
   "description": "Double Jeu — jeu de mots et de bluff entre amis, hors ligne",
   "type": "module",
@@ -9,7 +9,9 @@
     "check:words": "node scripts/check-words.mjs",
     "test": "node --test \"tests/unit/*.test.mjs\"",
     "e2e": "node tests/e2e/run.mjs",
-    "bundle": "node scripts/bundle.mjs"
+    "bundle": "node scripts/bundle.mjs",
+    "icons": "node scripts/make-icons.mjs",
+    "store": "node scripts/store-shots.mjs"
   },
   "devDependencies": {
     "esbuild": "^0.25.0",

@@ -39,7 +39,7 @@ jobs:
           npm run e2e
 
   apk:
-    name: APK Android
+    name: Android (AAB pour le Play Store, APK pour essayer)
     needs: tests
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -60,7 +60,7 @@ jobs:
             echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
             echo "DJ_KEYSTORE_FILE=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
           else
-            echo "::warning::Secret DJ_KEYSTORE_BASE64 absent : APK signé avec une clé de débogage jetable. Il s'installe, mais ne pourra pas mettre à jour une version signée autrement (voir README)."
+            echo "::warning::Secret DJ_KEYSTORE_BASE64 absent : fichiers signés avec une clé de débogage jetable. L'APK s'installe pour un essai, mais l'AAB sera refusé par le Play Store (voir GUIDE-PUBLICATION.md)."
           fi
       - name: Tests natifs, lint et compilation
         working-directory: android
@@ -68,23 +68,30 @@ jobs:
           DJ_KEYSTORE_PASSWORD: ${{ secrets.DJ_KEYSTORE_PASSWORD }}
           DJ_KEY_ALIAS: ${{ secrets.DJ_KEY_ALIAS }}
           DJ_KEY_PASSWORD: ${{ secrets.DJ_KEY_PASSWORD }}
-        run: ./gradlew --no-daemon :app:testDebugUnitTest :app:lintRelease :app:assembleRelease
+        run: ./gradlew --no-daemon :app:testDebugUnitTest :app:lintRelease :app:assembleRelease :app:bundleRelease
       - name: Nom du fichier
         id: name
         run: |
           version=$(grep -oP 'versionName = "\K[^"]+' android/app/build.gradle.kts)
           cp android/app/build/outputs/apk/release/app-release.apk "double-jeu-$version.apk"
+          cp android/app/build/outputs/bundle/release/app-release.aab "double-jeu-$version.aab"
           echo "file=double-jeu-$version.apk" >> "$GITHUB_OUTPUT"
+          echo "bundle=double-jeu-$version.aab" >> "$GITHUB_OUTPUT"
+          if grep -q '3940256099942544' android/monetization.properties; then
+            echo "::warning::Identifiants AdMob de démonstration : cette version affiche des publicités de test. Renseigne android/monetization.properties avant de publier."
+          fi
       - uses: actions/upload-artifact@v5
         with:
-          name: apk
-          path: ${{ steps.name.outputs.file }}
+          name: android
+          path: |
+            ${{ steps.name.outputs.file }}
+            ${{ steps.name.outputs.bundle }}
           if-no-files-found: error
       - name: Publication de la release
         if: startsWith(github.ref, 'refs/tags/v')
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" "${{ steps.name.outputs.file }}" --title "Double Jeu $GITHUB_REF_NAME" --generate-notes
+        run: gh release create "$GITHUB_REF_NAME" "${{ steps.name.outputs.file }}" "${{ steps.name.outputs.bundle }}" --title "Double Jeu $GITHUB_REF_NAME" --generate-notes
 
   emulator:
     name: Essai de l'APK sur émulateur

@@ -1,4 +1,5 @@
 // Pictogrammes au trait (24 × 24), dessinés pour l'application.
+import { logoArt } from './logo.js';
 const P = {
   cards: '<rect x="3.5" y="7" width="10" height="13.5" rx="2.2" transform="rotate(-9 8.5 13.75)"/><rect x="10.5" y="4" width="10" height="13.5" rx="2.2" transform="rotate(9 15.5 10.75)"/>',
   users: '<circle cx="9" cy="8.5" r="3.5"/><path d="M2.5 19.5c.6-3.4 3.1-5.5 6.5-5.5s5.9 2.1 6.5 5.5"/><circle cx="17.5" cy="9.5" r="2.5"/><path d="M18 14.2c2 .4 3.3 1.9 3.7 4.3"/>',
@@ -59,4 +60,9 @@ export function roleMark(role, size = 64) {
 /** Marque de l'application : deux mots qui se recoupent, et Mr. White dans l'intersection. */
 export function brandMark(size = 64) {
   return `<svg class="brand" viewBox="0 0 64 64" width="${size}" height="${size}" aria-hidden="true"><circle cx="23" cy="32" r="18" fill="#FFD23F"/><circle cx="41" cy="32" r="18" fill="#FF5A3C"/><path d="M32 16.4a18 18 0 0 1 0 31.2 18 18 0 0 1 0-31.2z" fill="#FFFDF8"/></svg>`;
+}
+
+/** Le logo : les deux cartes (accueil, boutique). */
+export function logoMark(size = 64) {
+  return `<svg class="logo" viewBox="17 17 74 74" width="${size}" height="${size}" aria-hidden="true">${logoArt()}</svg>`;
 }

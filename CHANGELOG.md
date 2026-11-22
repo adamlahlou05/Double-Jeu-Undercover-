@@ -1,5 +1,19 @@
 # Journal des versions
 
+## 3.0.0
+
+Version prévue pour le Play Store.
+
+- **Boutique.** Parties en réserve (3 offertes, +2 par pub vidéo vue jusqu’au bout, 10 au plus), achat unique
+  « Double Jeu illimité » (sans pub, tous les packs), trois packs de thèmes : Soirée, Politique & société, Foot.
+- **Rien de publicitaire pendant la première partie** : ni pub, ni fenêtre de consentement avant qu’elle soit finie.
+- **Jamais bloqué hors ligne** : si aucune pub n’est disponible, 2 parties par jour restent offertes.
+- **Photo de profil** : le bouton est en haut de l’écran, sur l’avatar.
+- **Niveau « Corsé » décoché par défaut.**
+- **Nouveau logo** (deux cartes : un joueur comme les autres, et l’intrus au chapeau), icône et visuels de fiche.
+- Android : Google Mobile Ads 25.5.0, consentement UMP 4.0.0, Play Billing 9.1.0 ; fichier AAB pour le Play Store.
+- Identifiants AdMob dans `android/monetization.properties` (identifiants de démonstration par défaut).
+
 ## 2.1.0
 
 La mise à jour s’installe par-dessus la 2.0 : profils, scores, historique et partie en cours sont conservés.

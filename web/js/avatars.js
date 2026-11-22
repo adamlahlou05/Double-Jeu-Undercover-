@@ -411,6 +411,9 @@ function drawing(face) {
   return halo + main;
 }
 
+/** Dessin d'un personnage (repère 64 × 64), à placer dans un élément qui définit la couleur --c. */
+export const faceArt = (id) => drawing(FACE_BY_ID[faceId(id)]);
+
 /** Bloc à insérer une fois dans la page : les dessins de tous les personnages. */
 export function avatarSprite() {
   return `<svg id="av-sprite" width="0" height="0" aria-hidden="true" focusable="false" style="position:absolute;width:0;height:0;overflow:hidden"><defs>${FACES.map((f) => `<symbol id="av-${f.id}" viewBox="0 0 64 64" overflow="visible">${drawing(f)}</symbol>`).join('')}</defs></svg>`;

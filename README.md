@@ -5,12 +5,22 @@ Tout le monde reçoit le même mot secret, sauf un ou deux infiltrés : l’**Un
 (et ne sait pas qu’il est l’Undercover), **Mr. White** n’a aucun mot. Chacun donne un indice,
 on débat, on vote, et on recommence jusqu’à la victoire d’un camp.
 
-Application Android, entièrement hors ligne : aucune permission réseau, aucune publicité, aucune donnée envoyée.
+Application Android. Le jeu lui-même fonctionne hors ligne : joueurs, photos, scores et historique restent
+sur le téléphone et ne sont envoyés nulle part.
 
-Une seule autorisation peut être demandée, et seulement si on s’en sert : l’**appareil photo**, pour prendre
-une photo de profil depuis l’application. La photo est enregistrée dans le profil du joueur, sur le téléphone,
-et n’en sort jamais (l’application n’a pas accès à Internet). Le micro n’est pas demandé. En cas de refus,
-tout fonctionne quand même : les joueurs gardent leur personnage.
+Depuis la version 3, l’application est prévue pour le Play Store :
+
+- **Parties en réserve.** 3 parties offertes à l’installation (la première se joue donc sans rien de
+  publicitaire), puis une pub vidéo regardée jusqu’au bout redonne 2 parties. Sans pub disponible
+  (hors ligne), 2 parties par jour restent offertes.
+- **Double Jeu illimité** : un achat unique qui retire les pubs et ouvre tous les packs.
+- **Packs de thèmes** vendus à l’unité : Soirée, Politique & société, Foot.
+
+Les pubs (Google AdMob, avec recueil du consentement) et les achats (Google Play) sont les seuls usages
+d’Internet. L’**appareil photo** n’est demandé que pour prendre une photo de profil, qui reste sur le
+téléphone ; le micro n’est jamais utilisé.
+
+Pour publier : **[GUIDE-PUBLICATION.md](GUIDE-PUBLICATION.md)**. Textes et visuels de la fiche : dossier `store/`.
 
 ## Ce qu’il y a dedans
 
@@ -18,7 +28,8 @@ tout fonctionne quand même : les joueurs gardent leur personnage.
 - **Trois modes** : Classique, Éclair (un seul vote) et Mystère (nombre d’infiltrés secret).
 - **Deux façons de voter** : à main levée, ou en secret sur le téléphone avec dépouillement automatique.
   Égalité : départage entre ex æquo, puis tirage au sort.
-- **2 229 paires de mots** dans 20 thèmes et 3 niveaux, sans répétition tant que la sélection n’est pas épuisée,
+- **2 229 paires de mots** dans 20 thèmes offerts et 3 niveaux (« Corsé » décoché par défaut), plus 198 paires
+  dans trois packs à débloquer, sans répétition tant que la sélection n’est pas épuisée,
   plus vos propres paires (« Nos mots »). Un thème « Électricité & électronique » de 100 paires, du disjoncteur
   au régulateur PID.
 - **Tour de parole sur un seul écran** : l’ordre complet du tour (Mr. White ne parle jamais en premier)
@@ -46,13 +57,18 @@ web/                  le jeu : HTML, CSS, JavaScript sans dépendance ni étape 
   js/words/           bibliothèque de mots, un fichier par famille de thèmes
   js/stats.js         classements et statistiques, recalculés depuis l’historique
   js/store.js         sauvegarde locale (fichiers natifs sur Android, localStorage dans un navigateur)
+  js/shop.js          règles de la boutique : réserve de parties, récompense des pubs, packs
+  js/logo.js          le logo, dessiné en vectoriel
   js/views*.js        écrans ; js/app.js : gestes, navigation, enchaînement des phases
 android/              coque Android : WebView servie localement, sauvegarde sur fichiers, bouton retour,
                       autorisation de l’appareil photo, vibrations, écran maintenu allumé
-tests/unit/           moteur de jeu et tirage des mots (Node)
+  …/Monetization.java pubs avec récompense (AdMob + consentement) et achats (Google Play Billing)
+  monetization.properties   identifiants AdMob (démonstration par défaut)
+store/                fiche Play Store : textes, icône 512, bannière, captures, page de confidentialité
+tests/unit/           moteur de jeu, tirage des mots, règles de la boutique (Node)
 tests/e2e/            parties complètes jouées dans Chromium à la taille d’un téléphone (Playwright)
-scripts/              serveur local, contrôle des mots, page autonome, essai sur émulateur
-.github/workflows/    tests, compilation de l’APK et essai sur émulateur à chaque envoi
+scripts/              serveur local, contrôle des mots, page autonome, icônes et captures de la fiche
+.github/workflows/    tests, compilation de l’AAB et de l’APK, essai sur émulateur à chaque envoi
 ```
 
 Le dossier `web/` est copié tel quel dans l’APK au moment de la compilation : le même code tourne
