@@ -534,6 +534,23 @@ async function run(url) {
       check(h.players[white].pts === 6 && h.players.filter((p) => p.pts > 0).length === 1, 'points de Mr. White incorrects');
       check(h.clues.length >= 6, 'les indices notés ne sont pas dans l’historique');
     }
+    // Selon le tirage de l'égalité, Mr. White a pu tomber plus tôt et la partie continuer : on la termine
+    // en faisant sortir les infiltrés restants, pour que la suite reparte d'une partie finie.
+    for (let guard = 0; guard < 12; guard++) {
+      g = await game();
+      if (!g || g.phase === 'end') break;
+      const target = g.players.findIndex((q) => q.alive && q.role !== 'civil');
+      await speakAll({ notes: true, tag: `fin${guard}` });
+      await tap(act('open-vote'));
+      await settle();
+      await secretVote((voter, cands) => (voter !== target ? target : cands[0]));
+      await wait(1000);
+      await tap(act('resolve-tally'));
+      await waitReveal();
+      if (await exists(act('skip-guess'))) { await tap(act('skip-guess')); await wait(300); }
+      await tap(act('after-reveal'));
+      await wait(900);
+    }
     check((await db()).history.length === 2, 'la deuxième partie n’est pas enregistrée');
   });
 
