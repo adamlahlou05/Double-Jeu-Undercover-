@@ -27,7 +27,7 @@ wait_for() { # attend qu'un texte apparaisse à l'écran
 }
 tap_text() { # touche le centre de l'élément qui porte ce texte
   local text="$1" bounds
-  bounds=$(dump | tr '>' '>\n' | grep "text=\"$text\"" | grep -o 'bounds="[^"]*"' | head -1 | grep -o '[0-9]\+' | tr '\n' ' ')
+  bounds=$(dump | sed 's/>/>\n/g' | grep "text=\"$text\"" | grep -o 'bounds="[^"]*"' | head -1 | grep -o '[0-9]\+' | tr '\n' ' ')
   [ -n "$bounds" ] || { echo "ÉCHEC : rien à toucher pour « $text »" >&2; return 1; }
   set -- $bounds
   adb shell input tap $(( ($1 + $3) / 2 )) $(( ($2 + $4) / 2 ))
