@@ -1,6 +1,6 @@
 # Publier Double Jeu sur le Play Store
 
-Version concernée : **3.0.0** (identifiant `io.github.adamlahlou05.doublejeu`).
+Version concernée : **3.1.0** (identifiant `io.github.adamlahlou05.doublejeu`).
 
 ## Où on en est
 
@@ -10,36 +10,76 @@ Version concernée : **3.0.0** (identifiant `io.github.adamlahlou05.doublejeu`).
 | Fichier AAB signé, prêt pour le Play Store | Créer ton compte AdMob et tes identifiants (étapes 3 et 4) |
 | Icône, bannière, 7 captures, textes de la fiche | Remplir la Play Console (étapes 5 à 7) |
 | Page de confidentialité rédigée | La mettre en ligne (étape 2) |
-| Guide App Store (étape 11) | Test fermé : 12 testeurs pendant 14 jours (étape 8) |
+| Code et historique sur GitHub | Test fermé : 12 testeurs pendant 14 jours (étape 8) |
 
-**Ce qui n'a pas pu être vérifié de mon côté** : les pubs et les paiements n'ont jamais tourné sur un vrai
-téléphone. Le code compile, les règles sont testées, mais le premier essai réel, c'est toi (étapes 1 et 8).
+**Ce qui n'a pas pu être vérifié de mon côté** : les pubs, le consentement et les paiements n'ont jamais
+tourné sur un vrai téléphone. Le code compile, les règles sont testées (44 tests de règles, 12 scénarios
+joués dans un navigateur avec une boutique simulée), mais le premier essai réel, c'est toi (étapes 1 et 8).
+
+## Comment l'appli gagne de l'argent
+
+| | Sans payer | Un pack | Double Jeu illimité |
+|---|---|---|---|
+| Mots | Sélection découverte : 150 paires faciles (300 mots), tous domaines mélangés | + les thèmes du pack, 3 niveaux | Les 24 thèmes, 2 487 paires, 3 niveaux |
+| Choix des thèmes et du niveau | Non | Oui, pour ses thèmes | Oui |
+| Parties | 3 offertes, puis 1 pub = 2 parties | Pareil | Illimitées |
+| Publicité | Vidéos choisies par le joueur | Pareil | Aucune |
+
+- Les 24 thèmes sont **tous visibles, avec un cadenas**. Toucher un thème verrouillé propose : l'essayer 12 h
+  contre une pub, acheter son pack, ou tout débloquer.
+- Les pubs sont uniquement des **vidéos avec récompense** : le joueur choisit de les lancer, et rien n'est
+  donné s'il ferme avant la fin. Aucune bannière, aucune pub imposée.
+- **Rien de publicitaire avant la fin de la première partie** : ni pub, ni essai par pub, ni fenêtre de consentement.
+- Hors ligne ou sans pub disponible : 2 parties par jour restent offertes, pour ne jamais bloquer une soirée.
+- Les achats sont définitifs et liés au compte Google (retrouvés après réinstallation).
+
+Les 8 packs :
+
+| Pack | Thèmes | Paires |
+|---|---|---|
+| Quotidien | Objets, À table, Animaux, Scènes du quotidien, Métiers | 595 |
+| Culture | Tour du monde, Histoire & mythes, Culture générale, Sciences & nature, Stars & personnages | 586 |
+| Écrans & loisirs | Cinéma & séries, Musique, Sport, Loisirs & jeux, Tech & numérique | 532 |
+| Esprit | Expressions, Idées & émotions, Insolite & humour, École & boulot, Électricité & électronique | 516 |
+| Soirée | Soirée | 60 |
+| Coquin (adultes) | Coquin : séduction, flirt, sous-entendus | 60 |
+| Politique & société | Politique & société | 72 |
+| Foot | Foot | 66 |
 
 ## Fichiers
 
 | Fichier | Rôle |
 |---|---|
-| `double-jeu-3.0.0.aab` | À envoyer au Play Store. Pubs **de test** tant que l'étape 4 n'est pas faite. |
-| `double-jeu-3.0.0.apk` | Pour essayer sur ton téléphone, sans passer par le Play Store. |
+| `double-jeu-3.1.0.aab` | À envoyer au Play Store. Pubs **de test** tant que l'étape 4 n'est pas faite. |
+| `double-jeu-3.1.0.apk` | Pour essayer sur ton téléphone, sans passer par le Play Store. |
 | `double-jeu-release.jks` + son mot de passe | Clé de signature (déjà reçue). À garder précieusement, hors du dépôt. |
 | `store/icone-512.png`, `store/banniere-1024x500.png`, `store/capture-1..7.png` | Visuels de la fiche. |
 | `store/fiche-play-store.md` | Titre, descriptions et champs à copier. |
 | `store/site/` | Page de confidentialité, `app-ads.txt`, page d'accueil du site. |
 
+Dépôt GitHub : `adamlahlou05/Double-Jeu-Undercover-`, branche `main`. Chaque modification y relance les
+tests et la compilation (onglet Actions, artefact `android`).
+
 ---
 
-## 1. Essayer l'APK (10 minutes)
+## 1. Essayer l'APK (15 minutes)
 
-Installe `double-jeu-3.0.0.apk` par-dessus ta version actuelle (les joueurs et scores sont conservés).
+Installe `double-jeu-3.1.0.apk` par-dessus ta version actuelle.
 
+**Tes joueurs actuels restent là** : une mise à jour ne supprime jamais les données. Une installation neuve,
+elle, n'en contient aucun. Pour repartir de zéro : la corbeille sur chaque ligne de l'écran Joueurs, ou
+Réglages, « Tout effacer ».
+
+- [ ] Écran Joueurs : crayon et corbeille sur chaque ligne ; la suppression demande une confirmation.
+- [ ] « Qui joue ? » : la tuile « Modifier » permet de changer un nom ou une photo sans quitter l'écran.
+- [ ] Sans achat, la partie se joue avec la « Sélection découverte » ; les niveaux ne sont pas proposés.
+- [ ] Liste des thèmes : 24 thèmes avec un cadenas. Avant la première partie, aucun essai par pub n'est proposé.
 - [ ] La première partie se lance sans aucune pub ni fenêtre de consentement.
-- [ ] L'accueil affiche « 3 parties » en haut à droite ; le compteur baisse à chaque partie.
-- [ ] À 0, « Jouer » ouvre la feuille de réserve. « Regarder une pub » affiche une vidéo marquée *Test Ad*.
-- [ ] Vidéo regardée jusqu'au bout : +2 parties, la partie démarre. Vidéo fermée avant la fin : rien.
+- [ ] Après une partie : toucher un thème verrouillé, « L'essayer 12 h », vidéo marquée *Test Ad* regardée
+      jusqu'au bout : le thème s'ouvre, coché, avec la mention « essai ». Vidéo fermée avant la fin : rien.
+- [ ] L'accueil affiche « 3 parties » ; à 0, « Jouer » ouvre la réserve ; une pub vue en entier donne +2.
 - [ ] En mode avion : la partie est offerte (2 fois par jour), puis un message demande de se reconnecter.
 - [ ] Dans la Boutique, les prix affichent « Indisponible » : normal tant que l'étape 7 n'est pas faite.
-- [ ] Nouveau joueur : le bouton photo est en haut, sur l'avatar.
-- [ ] Réglages de partie : « Corsé » est décoché.
 
 Un point qui ne marche pas : dis-le-moi avec ce que tu vois à l'écran.
 
@@ -67,8 +107,8 @@ Les intitulés peuvent varier légèrement dans la console.
    (pays : France, devise : EUR) et renseigne les informations de paiement.
 2. **Applications, Ajouter une application** : Android, « non, elle n'est pas encore sur une plateforme »,
    nom « Double Jeu ». Note l'**ID de l'application** : `ca-app-pub-…~…`.
-3. Dans cette appli : **Blocs d'annonces, Ajouter, Avec récompense**. Nom « Parties ». Garde les réglages
-   par défaut. Note l'**ID du bloc** : `ca-app-pub-…/…`.
+3. Dans cette appli : **Blocs d'annonces, Ajouter, Avec récompense**. Nom « Récompense ». Garde les réglages
+   par défaut (le même bloc sert pour les parties et pour l'essai d'un thème). Note l'**ID du bloc** : `ca-app-pub-…/…`.
 4. **Confidentialité et messages, Réglementations européennes** : crée un message pour l'appli Double Jeu,
    en français, avec les boutons « Autoriser » et « Ne pas autoriser », puis **publie-le**.
    Sans ce message, aucune pub ne s'affiche en Europe : le jeu donne alors seulement les parties de secours.
@@ -106,7 +146,7 @@ Je n'ai pas pu déposer ces secrets moi-même : l'envoi de ta clé de signature 
 ## 5. Play Console : créer l'appli et envoyer une première version
 
 1. **Créer une application** : nom du tableau ci-dessous, langue Français (France), « Jeu », « Gratuite ».
-2. **Tests, Tests internes, Créer une release** : envoie `double-jeu-3.0.0.aab`.
+2. **Tests, Tests internes, Créer une release** : envoie `double-jeu-3.1.0.aab`.
    - À la question sur la signature, accepte **la signature d'application par Google Play** (choix par défaut).
      Ta clé `.jks` devient la « clé d'importation » : il la faudra pour chaque mise à jour.
    - Ajoute ton adresse Gmail à la liste des testeurs, ouvre le lien de participation sur ton téléphone.
@@ -127,8 +167,8 @@ Envoyer cette première version tôt est utile : les produits à vendre (étape 
 | Règles de confidentialité | `https://adamlahlou05.github.io/confidentialite.html` |
 | Annonces | Oui, l'appli contient des annonces |
 | Accès à l'appli | Toutes les fonctionnalités sont accessibles sans identifiant |
-| Classification du contenu | Questionnaire, catégorie Jeu. Pas de violence, pas de contenu sexuel, pas de jeux d'argent. **Oui** aux références à l'alcool (pack Soirée). Les joueurs n'échangent rien en ligne. |
-| Public cible | **18 ans et plus** uniquement. Avec de la publicité et un pack Soirée, c'est le choix qui évite les règles « Familles ». |
+| Classification du contenu | Questionnaire, catégorie Jeu. Pas de violence, pas de nudité ni d'images, pas de jeux d'argent. **Oui** aux références à l'alcool (pack Soirée) et **oui** aux allusions ou références sexuelles, en texte seulement (pack Coquin). Les joueurs n'échangent rien en ligne. Réponds exactement : une classification trop basse est un motif de retrait. |
+| Public cible | **18 ans et plus** uniquement. Avec de la publicité, un pack Soirée et un pack Coquin, c'est le seul choix cohérent, et il évite les règles « Familles ». |
 | Identifiant publicitaire | Oui ; finalité : publicité ou marketing |
 | Sécurité des données | Voir ci-dessous |
 | Applications d'actualités, santé, finance, administration | Non à tout |
@@ -154,20 +194,29 @@ revenus (micro-entreprise le plus souvent). Je ne suis pas conseiller fiscal : v
 
 ## 7. Produits à vendre
 
-Menu **Monétiser avec Play, Produits, Produits ponctuels** (ancien nom : « produits intégrés à l'application »). Les identifiants doivent être **exactement** ceux-ci
-(ils ne se changent plus ensuite) :
+Menu **Monétiser avec Play, Produits, Produits ponctuels** (ancien nom : « produits intégrés à
+l'application »). Neuf produits. Les identifiants doivent être **exactement** ceux-ci (ils ne se changent
+plus ensuite) :
 
 | Identifiant | Nom affiché | Prix conseillé |
 |---|---|---|
-| `premium` | Double Jeu illimité | 4,99 € |
-| `pack_soiree` | Pack Soirée | 1,99 € |
-| `pack_politique` | Pack Politique & société | 1,99 € |
-| `pack_foot` | Pack Foot | 1,99 € |
+| `premium` | Double Jeu illimité | 5,99 € |
+| `pack_quotidien` | Pack Quotidien | 1,99 € |
+| `pack_culture` | Pack Culture | 1,99 € |
+| `pack_loisirs` | Pack Écrans & loisirs | 1,99 € |
+| `pack_esprit` | Pack Esprit | 1,99 € |
+| `pack_soiree` | Pack Soirée | 0,99 € |
+| `pack_coquin` | Pack Coquin | 0,99 € |
+| `pack_politique` | Pack Politique & société | 0,99 € |
+| `pack_foot` | Pack Foot | 0,99 € |
 
 Pour chacun : nom, description d'une ligne, une option d'achat « Acheter » au prix indiqué, puis **Activer**.
 C'est l'appli qui les traite comme des achats définitifs (rien à cocher pour ça).
-Pourquoi ces prix : l'illimité coûte moins que trois packs, donc il se vend ; à 4,99 €, il vaut plusieurs
-centaines de pubs regardées. Tu peux les changer à tout moment sans toucher à l'appli.
+
+Pourquoi ces prix : les huit packs coûtent 11,92 € au total, l'illimité 5,99 €. Dès qu'un joueur veut plus de
+deux gros packs, l'illimité est le meilleur choix, et c'est lui qui retire les pubs. Les packs servent surtout
+de point de comparaison. Tu peux changer les prix à tout moment dans la Play Console, sans toucher à l'appli :
+elle affiche ceux que Google lui renvoie. Un produit non créé s'affiche « Indisponible ».
 
 Pour tester un achat sans payer : Play Console, Paramètres, **Test de licence**, ajoute ton adresse Gmail.
 
@@ -176,7 +225,8 @@ Pour tester un achat sans payer : Play Console, Paramètres, **Test de licence**
 1. **Test interne** (toi seul, disponible en quelques minutes) : refais la liste de l'étape 1 avec la version
    du Play Store, plus :
    - [ ] La fenêtre de consentement de Google apparaît après la première partie.
-   - [ ] La Boutique affiche les quatre prix ; un achat de test débloque le produit.
+   - [ ] La Boutique affiche les neuf prix ; un achat de test débloque le produit.
+   - [ ] Un pack acheté ouvre ses thèmes (cochés d'office) ; l'illimité ouvre tout et retire la réserve.
    - [ ] Après désinstallation et réinstallation, « Restaurer mes achats » le retrouve.
 2. **Test fermé** : obligatoire si ton compte personnel a été créé après le 13 novembre 2023. Il faut
    **12 testeurs inscrits pendant 14 jours d'affilée** avant de pouvoir demander l'accès à la production.
@@ -233,21 +283,44 @@ Mon conseil : sors d'abord sur le Play Store, regarde si le jeu prend, puis on f
 
 ## Régler le modèle économique
 
-Tout est dans `web/js/shop.js`, en haut du fichier :
+Deux fichiers, en haut de chacun :
 
-| Constante | Valeur | Effet |
-|---|---|---|
-| `START` | 3 | Parties offertes à l'installation |
-| `REWARD` | 2 | Parties gagnées par pub vue jusqu'au bout |
-| `MAX` | 10 | Réserve maximale |
-| `RESCUE_PER_DAY` | 2 | Parties offertes par 24 h quand aucune pub n'est disponible |
+| Fichier | Constante | Valeur | Effet |
+|---|---|---|---|
+| `web/js/shop.js` | `START` | 3 | Parties offertes à l'installation |
+| `web/js/shop.js` | `REWARD` | 2 | Parties gagnées par pub vue jusqu'au bout |
+| `web/js/shop.js` | `MAX` | 10 | Réserve maximale |
+| `web/js/shop.js` | `RESCUE_PER_DAY` | 2 | Parties offertes par 24 h quand aucune pub n'est disponible |
+| `web/js/shop.js` | `TRIAL_HOURS` | 12 | Durée d'essai d'un thème ouvert par une pub |
+| `web/js/words/index.js` | `DISCOVERY_SIZE` | 150 | Nombre de paires offertes (sélection découverte) |
+
+Pour rendre le jeu plus généreux ou plus serré, ce sont les seuls chiffres à toucher. Les tests vérifient les
+valeurs actuelles : après un changement, lance `npm test` et corrige les deux ou trois nombres attendus.
 
 Pour ajouter un pack : un thème dans `web/js/words/premium.js` avec son champ `pack`, une ligne dans `PACKS`
 (`shop.js`), l'identifiant dans `Monetization.java`, et le produit dans la Play Console.
 
+## Sécurité : ce qui est en place
+
+- La page du jeu n'exécute que ses propres fichiers et ne contacte aucun serveur. Un nom, un mot ou une
+  sauvegarde importée ne peut pas y glisser du code.
+- Sauvegarde importée : photos et identifiants contrôlés ; ce qui n'a pas la bonne forme est écarté.
+- Les joueurs et leurs photos ne partent plus dans la sauvegarde Google du téléphone. Conséquence : une
+  réinstallation repart de zéro (les achats, eux, reviennent). Le transfert direct d'un téléphone à l'autre
+  reste possible, ainsi que Réglages, Exporter puis Importer.
+- Trafic non chiffré interdit ; seules les pages embarquées dans l'appli peuvent s'afficher.
+- La clé de signature n'est ni dans le dépôt ni sur GitHub.
+
 ## Limites à connaître
 
-- La réserve est enregistrée sur le téléphone : effacer les données de l'appli la remet à 3. Les achats, eux,
-  sont liés au compte Google et reviennent toujours.
-- Les achats sont vérifiés par Google Play sur le téléphone, sans serveur. C'est suffisant pour démarrer.
-- Sur un téléphone sans services Google, il n'y a ni pub ni achat : seules les parties de secours restent.
+- La réserve et les essais sont enregistrés sur le téléphone : effacer les données de l'appli les remet à
+  zéro (3 parties). Les achats sont liés au compte Google et reviennent toujours.
+- Les achats sont vérifiés par Google Play sur le téléphone, sans serveur. Quelqu'un qui modifie l'appli ou
+  son téléphone peut contourner un achat ; l'empêcher demanderait un serveur de vérification. Pour un jeu à
+  quelques euros, ce n'est pas rentable au départ.
+- Le dépôt GitHub est **public** : tous les mots, packs payants compris, y sont lisibles. Passe-le en privé
+  (Settings, General, Danger Zone, Change visibility) avant la sortie.
+- Sur un téléphone sans services Google, il n'y a ni pub ni achat : seules la sélection découverte et les
+  parties de secours restent.
+- Tes amis qui ont la 2.1 : après mise à jour, leurs joueurs et scores restent, mais les thèmes passent sous
+  cadenas comme pour tout le monde.

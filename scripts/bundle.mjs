@@ -19,6 +19,8 @@ for (const m of [...css.matchAll(fontRe)]) {
 let html = await readFile(`${web}index.html`, 'utf8');
 const flag = process.argv.includes('--no-download') ? '<script>window.DJ_NO_DOWNLOAD=true;</script>\n' : '';
 html = html
+  // Scripts et styles sont inclus dans la page : la politique « fichiers de l'appli seulement » ne peut pas s'y appliquer.
+  .replace(/<!-- La page n'exécute[^\n]*\n<meta http-equiv="Content-Security-Policy"[^\n]*\n/, '')
   .replace('<link rel="stylesheet" href="css/app.css">', () => `<style>${css}</style>`)
   .replace('<script type="module" src="js/app.js"></script>', () => `${flag}<script>${js.outputFiles[0].text.replace(/<\/script/g, '<\\/script')}</script>`);
 await mkdir(`${root}dist`, { recursive: true });

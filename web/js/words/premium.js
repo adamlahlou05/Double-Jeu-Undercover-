@@ -1,4 +1,4 @@
-// Bibliothèque de mots — Packs à débloquer : Soirée, Politique & société, Foot.
+// Bibliothèque de mots — Thèmes vendus en plus : Soirée, Coquin, Politique & société, Foot.
 // Chaque thème porte l'identifiant du produit Google Play qui le débloque (champ `pack`).
 // L'achat « Double Jeu illimité » les débloque tous.
 
@@ -72,6 +72,77 @@ Lendemain de cuite|Dimanche pluvieux
 Doliprane|Jus d'orange
 Pilier de bar|Fêtard du dimanche
 Dernier verre|Verre de trop
+`,
+  },
+  {
+    id: 'coquin',
+    name: 'Coquin',
+    hint: 'Séduction, flirt et sous-entendus (adultes)',
+    pack: 'pack_coquin',
+    w: `
+#1
+Bisou|Câlin
+Flirt|Drague
+Premier baiser|Premier rendez-vous
+Coup de cœur|Coup d'un soir
+Saint-Valentin|Dîner aux chandelles
+Lingerie|Maillot de bain
+Nuisette|Peignoir en soie
+Massage|Chatouilles
+Jacuzzi|Bain de minuit
+Bain moussant|Douche à deux
+Clin d'œil|Sourire en coin
+Parfum|Rouge à lèvres
+Talons aiguilles|Bas résille
+Chemise entrouverte|Torse nu
+Slow langoureux|Danse collé-serré
+Mot doux|Sexto
+Appli de rencontre|Speed dating
+Célibataire|En couple
+Jalousie maladive|Scène de ménage
+Lune de miel|Week-end en amoureux
+#2
+French kiss|Baiser volé
+Suçon|Morsure
+Strip-tease|Effeuillage
+Strip-poker|Jeu de la bouteille
+Menottes|Bandeau sur les yeux
+Huile de massage|Bougie parfumée
+Chambre d'hôtel|Banquette arrière
+Plan à trois|Triangle amoureux
+Sex friend|Friend zone
+Coup de foudre charnel|Tension dans l'air
+Préservatif|Pilule
+Aphrodisiaque|Philtre d'amour
+Fantasme|Rêve érotique
+Kamasutra|Yoga à deux
+Nuit torride|Grasse matinée à deux
+Walk of shame|Petit-déjeuner au lit
+Amant|Mari jaloux
+Maîtresse (amante)|Meilleure amie
+Infidélité|Double vie
+Selfie sexy|Photo de profil retouchée
+Match|Super like
+Ghosting|Relance à 2 h du matin
+Tenue d'infirmière|Uniforme de pompier
+Calendrier des Dieux du stade|Chippendales
+#3
+Cinquante nuances de Grey|Basic Instinct
+Don Juan|Casanova
+Cupidon|Vénus
+Libertin|Séducteur
+Préliminaires|Sous-entendus
+Exhibitionniste|Voyeur
+Plage naturiste|Plage privée
+Polyamour|Couple libre
+Carré blanc|Interdit aux moins de 18 ans
+Boudoir|Alcôve
+Bagatelle|Galipette
+Feuille de vigne|Cache-sexe
+Moulin Rouge|Crazy Horse
+Marquise des Anges|Emmanuelle
+Lit à baldaquin|Draps de satin
+Septième ciel à deux|Petite mort
 `,
   },
   {

@@ -69,13 +69,51 @@ test('état enregistré abîmé : remis d’aplomb sans cadeau indu', () => {
   assert.deepEqual(Shop.cleanEco({ rescues: 'non' }).rescues, []);
 });
 
-test('chaque pack vendu correspond à un thème de la bibliothèque, et inversement', () => {
+test('chaque thème appartient à un pack vendu, et un seul', () => {
+  const seen = new Set();
   for (const p of Shop.PACKS) {
-    const cat = CATEGORIES.find((c) => c.id === p.cat);
-    assert.ok(cat, `thème manquant pour ${p.id}`);
-    assert.equal(cat.pack, p.id);
+    assert.ok(p.cats.length >= 1);
+    for (const id of p.cats) {
+      const cat = CATEGORIES.find((c) => c.id === id);
+      assert.ok(cat, `thème manquant pour ${p.id} : ${id}`);
+      assert.equal(cat.pack, p.id);
+      assert.ok(!seen.has(id), `${id} est vendu dans deux packs`);
+      seen.add(id);
+    }
   }
-  for (const c of CATEGORIES.filter((k) => k.pack)) assert.ok(Shop.PACKS.some((p) => p.id === c.pack), `pack inconnu : ${c.pack}`);
+  for (const c of CATEGORIES) assert.ok(seen.has(c.id), `thème sans pack : ${c.id}`);
   assert.equal(Shop.PRODUCT_IDS.length, new Set(Shop.PRODUCT_IDS).size);
+  assert.equal(Shop.PRODUCT_IDS.length, Shop.PACKS.length + 1);
   assert.equal(Shop.shopActive(), false, 'pas de boutique hors de l’application');
+});
+
+test('thèmes : fermés au départ, ouverts par leur pack, par l’illimité ou par un essai', () => {
+  const now = 1_800_000_000_000;
+  const foot = CATEGORIES.find((c) => c.id === 'foot'), geo = CATEGORIES.find((c) => c.id === 'geo'), histoire = CATEGORIES.find((c) => c.id === 'histoire');
+  let eco = fresh();
+  for (const c of CATEGORIES) assert.equal(Shop.themeOpen(eco, c, now), false, `${c.id} devrait être verrouillé à l’installation`);
+  eco = Shop.withOwned(eco, ['pack_culture']);
+  assert.ok(Shop.themeOpen(eco, geo, now) && Shop.themeOpen(eco, histoire, now), 'un pack ouvre tous ses thèmes');
+  assert.ok(!Shop.themeOpen(eco, foot, now), 'un pack n’ouvre pas les thèmes des autres');
+  eco = Shop.withOwned(eco, [SHOP.PREMIUM]);
+  for (const c of CATEGORIES) assert.ok(Shop.themeOpen(eco, c, now), `l’illimité doit ouvrir ${c.id}`);
+});
+
+test('essai d’un thème après une pub : ouvert quelques heures, puis refermé', () => {
+  const now = 1_800_000_000_000, hour = 3600 * 1000;
+  const foot = CATEGORIES.find((c) => c.id === 'foot'), geo = CATEGORIES.find((c) => c.id === 'geo');
+  let eco = Shop.grantTrial(fresh(), 'foot', now);
+  assert.ok(Shop.themeOpen(eco, foot, now + 1000));
+  assert.ok(!Shop.themeOpen(eco, geo, now + 1000), 'l’essai ne vaut que pour le thème choisi');
+  assert.equal(Shop.trialEnd(eco, 'foot', now), now + SHOP.TRIAL_HOURS * hour);
+  assert.ok(Shop.themeOpen(eco, foot, now + SHOP.TRIAL_HOURS * hour - 1000));
+  assert.ok(!Shop.themeOpen(eco, foot, now + SHOP.TRIAL_HOURS * hour + 1000), 'l’essai doit se terminer');
+  assert.equal(Shop.trialEnd(eco, 'foot', now + SHOP.TRIAL_HOURS * hour + 1000), 0);
+  // Un deuxième essai nettoie ceux qui sont terminés, et l'état survit à un enregistrement.
+  eco = Shop.grantTrial(eco, 'geo', now + 30 * hour);
+  assert.deepEqual(Object.keys(eco.trials), ['geo']);
+  assert.deepEqual(Shop.cleanEco(JSON.parse(JSON.stringify(eco))).trials, eco.trials);
+  assert.deepEqual(Shop.cleanEco({ trials: 'non' }).trials, {});
+  assert.deepEqual(Shop.cleanEco({ trials: { foot: 'demain', geo: -5 } }).trials, {});
+  assert.equal(Shop.reward(eco).credits, eco.credits + SHOP.REWARD, 'une pub pour la réserve donne toujours des parties');
 });

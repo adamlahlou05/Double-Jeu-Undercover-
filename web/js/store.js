@@ -5,6 +5,13 @@
 import { upgradeGame } from './engine.js';
 import { cleanEco } from './shop.js';
 
+/** Seule forme admise pour une photo de profil : image JPEG, PNG ou WebP encodée en base64. */
+export const PHOTO_RE = /^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/;
+
+/** Identifiants produits par l'appli : lettres, chiffres, tiret. Tout autre contenu (fichier trafiqué) est écarté. */
+const ID_RE = /^[\w-]{1,40}$/;
+const okId = (v) => (typeof v === 'string' || typeof v === 'number') && ID_RE.test(String(v));
+
 const NS = 'dj2:';
 const KEYS = ['meta', 'profiles', 'history', 'game'];
 const native = typeof window !== 'undefined' && window.DJNative ? window.DJNative : null;
@@ -49,8 +56,9 @@ export function cleanProfile(p) {
   if (!p || typeof p !== 'object') return null;
   const name = str(p.name, 16).trim();
   const id = str(p.id, 40);
-  if (!name || !id) return null;
-  const photo = typeof p.photo === 'string' && p.photo.startsWith('data:image/') && p.photo.length < 400000 ? p.photo : '';
+  if (!name || !okId(id)) return null;
+  // Une photo est une image encodée, rien d'autre : une sauvegarde importée ne peut pas y glisser du code.
+  const photo = typeof p.photo === 'string' && p.photo.length < 400000 && PHOTO_RE.test(p.photo) ? p.photo : '';
   return { id, name, color: str(p.color, 20), face: str(p.face, 20), photo, createdAt: Number(p.createdAt) || Date.now() };
 }
 
@@ -76,12 +84,14 @@ function cleanMeta(m) {
 }
 
 function cleanHistory(h) {
-  return arr(h).filter((r) => r && typeof r === 'object' && r.id && Array.isArray(r.players) && r.winner && Number(r.at) > 0);
+  return arr(h).filter((r) => r && typeof r === 'object' && okId(r.id) && Array.isArray(r.players) && r.winner && Number(r.at) > 0
+    && r.players.every((x) => x && typeof x === 'object' && okId(x.id)));
 }
 
 function cleanGame(g) {
   if (!g || typeof g !== 'object' || g.v !== 1 || !Array.isArray(g.players) || !Array.isArray(g.cards)) return null;
   if (g.players.length !== g.cards.length || !g.phase || !g.words) return null;
+  if (!g.players.every((x) => x && typeof x === 'object' && okId(x.id))) return null;
   return upgradeGame(g);
 }
 

@@ -425,7 +425,7 @@ export function avatarSprite() {
  */
 export function avatar(who, cls = 's44') {
   const hex = colorHex(who && who.color);
-  if (who && who.photo) return `<span class="av photo ${cls}" style="--c:${hex}"><img src="${who.photo}" alt="" draggable="false"></span>`;
+  if (who && who.photo) return `<span class="av photo ${cls}" style="--c:${hex}"><img src="${String(who.photo).replace(/[^A-Za-z0-9+/=:;,]/g, '')}" alt="" draggable="false"></span>`;
   return `<span class="av ${cls}" style="--c:${hex}"><svg viewBox="0 0 64 64" aria-hidden="true"><use href="#av-${faceId(who && who.face)}"/></svg></span>`;
 }
 

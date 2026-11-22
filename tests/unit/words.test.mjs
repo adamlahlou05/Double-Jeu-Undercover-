@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { CATEGORIES, TOTAL_PAIRS, LEVELS, buildPool, pickPair, categoryName } from '../../web/js/words/index.js';
+import { CATEGORIES, TOTAL_PAIRS, LEVELS, DISCOVERY_CAT, DISCOVERY_PAIRS, DISCOVERY_SIZE, buildPool, pickPair, categoryName } from '../../web/js/words/index.js';
 import { norm, guessMatches, pairKey, lev } from '../../web/js/text.js';
 
 test('bibliothèque : volume, niveaux et unicité', () => {
@@ -9,8 +9,9 @@ test('bibliothèque : volume, niveaux et unicité', () => {
   const keys = new Set();
   for (const c of CATEGORIES) {
     assert.ok(c.name && c.hint, c.id);
-    // Un thème offert compte au moins 80 paires ; un pack à débloquer, au moins 55.
-    assert.ok(c.pairs.length >= (c.pack ? 55 : 80), `${c.id} : ${c.pairs.length} paires`);
+    // Un thème de la bibliothèque de base compte au moins 80 paires ; un thème vendu en plus, au moins 55.
+    assert.ok(c.pairs.length >= (c.extra ? 55 : 80), `${c.id} : ${c.pairs.length} paires`);
+    assert.ok(c.pack, `${c.id} : aucun pack ne débloque ce thème`);
     for (const p of c.pairs) {
       assert.ok([1, 2, 3].includes(p.lvl));
       assert.notEqual(norm(p.a), norm(p.b), `${p.a} | ${p.b}`);
@@ -77,4 +78,25 @@ test('proposition de Mr. White : tolérante mais pas naïve', () => {
   for (const [g, c, u, expected] of cases) assert.equal(guessMatches(g, c, u), expected, `${g} / ${c}`);
   assert.equal(pairKey('Café', 'Thé'), pairKey('thé', 'CAFE'));
   assert.equal(lev('chat', 'chien'), 3);
+});
+
+test('sélection découverte : 150 paires faciles, piochées dans tous les thèmes de base', () => {
+  assert.equal(DISCOVERY_PAIRS.length, DISCOVERY_SIZE);
+  assert.equal(DISCOVERY_SIZE, 150);
+  assert.equal(new Set(DISCOVERY_PAIRS.map((p) => p.key)).size, DISCOVERY_SIZE, 'une paire en double');
+  assert.ok(DISCOVERY_PAIRS.every((p) => p.lvl === 1), 'la sélection offerte ne contient que des paires faciles');
+  const extra = new Set(CATEGORIES.filter((c) => c.extra).map((c) => c.id));
+  assert.ok(DISCOVERY_PAIRS.every((p) => !extra.has(p.cat)), 'les thèmes vendus en plus ne donnent aucune paire offerte');
+  const per = {};
+  for (const p of DISCOVERY_PAIRS) per[p.cat] = (per[p.cat] || 0) + 1;
+  assert.ok(Object.keys(per).length >= 18, 'la sélection doit couvrir presque tous les thèmes de base');
+  assert.ok(Math.max(...Object.values(per)) <= 9, 'aucun thème ne doit dominer la sélection');
+  assert.equal(categoryName(DISCOVERY_CAT.id), 'Sélection découverte');
+  // Elle se joue seule, quels que soient les niveaux cochés, et ne double pas un thème débloqué.
+  assert.equal(buildPool({ cats: [DISCOVERY_CAT.id], levels: [3], custom: [] }).length, DISCOVERY_SIZE);
+  assert.equal(buildPool({ cats: [], levels: [1, 2, 3], custom: [] }).length, 0);
+  const geo = CATEGORIES.find((c) => c.id === 'geo');
+  const both = buildPool({ cats: ['geo', DISCOVERY_CAT.id], levels: [1, 2, 3], custom: [] });
+  assert.equal(both.length, geo.pairs.length + DISCOVERY_SIZE - per.geo);
+  assert.equal(new Set(both.map((p) => p.key)).size, both.length);
 });

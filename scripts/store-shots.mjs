@@ -35,7 +35,17 @@ for (const [a, b] of [['Café', 'Thé'], ['Pile', 'Batterie'], ['Lyon', 'Marseil
 }
 const meta = { v: 1, settings: { theme: 'light', sound: false, haptics: false, motion: false }, used: [], recent: [], custom: [], rulesSeen: true, setup: { players: profiles.map((p) => p.id), mode: 'classic', u: 1, w: 1, auto: true, levels: [1, 2], rev: 3, vote: 'open', timer: 120, notes: true } };
 
-await page.addInitScript(() => { window.DJ_TEST = true; });
+await page.addInitScript(() => {
+  window.DJ_TEST = true;
+  // Même accueil que dans l'application Android : réserve de parties et sélection offerte.
+  window.DJNative = {
+    read: (k) => localStorage.getItem('dj2:' + k) || '', readBackup: () => '',
+    write: (k, v) => { localStorage.setItem('dj2:' + k, v); return true; },
+    isNight: () => false, setBars() {}, keepAwake() {}, vibrate() {}, exportFile() {},
+    shopInfo: () => JSON.stringify({ ads: true, billing: true, owned: [], prices: {}, privacy: false, test: false }),
+    adsWarmup() {}, showRewarded() {}, buy() {}, restorePurchases() {}, privacyOptions() {},
+  };
+});
 await page.goto(url);
 await page.evaluate(({ meta, profiles, history }) => {
   localStorage.clear();

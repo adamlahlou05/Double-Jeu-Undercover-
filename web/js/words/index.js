@@ -15,7 +15,15 @@ export const LEVELS = [
 
 const ORDER = ['objets', 'nourriture', 'animaux', 'situations', 'metiers', 'ecole', 'loisirs', 'sport', 'cinema', 'musique',
   'celebrites', 'geo', 'histoire', 'culture', 'sciences', 'elec', 'tech', 'expressions', 'abstrait', 'humour',
-  'soiree', 'politique', 'foot'];
+  'soiree', 'coquin', 'politique', 'foot'];
+
+/** Pack qui débloque chaque thème de base (les thèmes ajoutés par premium.js portent le leur). */
+const THEME_PACK = {
+  objets: 'pack_quotidien', nourriture: 'pack_quotidien', animaux: 'pack_quotidien', situations: 'pack_quotidien', metiers: 'pack_quotidien',
+  geo: 'pack_culture', histoire: 'pack_culture', culture: 'pack_culture', sciences: 'pack_culture', celebrites: 'pack_culture',
+  cinema: 'pack_loisirs', musique: 'pack_loisirs', sport: 'pack_loisirs', loisirs: 'pack_loisirs', tech: 'pack_loisirs',
+  expressions: 'pack_esprit', abstrait: 'pack_esprit', humour: 'pack_esprit', ecole: 'pack_esprit', elec: 'pack_esprit',
+};
 
 function parse(cat) {
   const out = [];
@@ -35,19 +43,33 @@ function parse(cat) {
 const RAW = [...nature, ...monde, ...vie, ...divertissement, ...esprit, ...premium];
 
 export const CATEGORIES = RAW
-  // `pack` : identifiant du produit qui débloque le thème (absent pour les thèmes offerts).
-  .map((c) => ({ id: c.id, name: c.name, hint: c.hint, pack: c.pack || null, pairs: parse(c) }))
+  // `pack` : produit qui débloque le thème. `extra` : thème vendu en plus de la bibliothèque de base.
+  .map((c) => ({ id: c.id, name: c.name, hint: c.hint, pack: c.pack || THEME_PACK[c.id] || null, extra: !!c.pack, pairs: parse(c) }))
   .sort((x, y) => ORDER.indexOf(x.id) - ORDER.indexOf(y.id));
 
 export const CUSTOM_CAT = { id: 'perso', name: 'Nos mots', hint: 'Les paires ajoutées par votre groupe' };
 
 export const TOTAL_PAIRS = CATEGORIES.reduce((n, c) => n + c.pairs.length, 0);
-/** Paires des thèmes offerts (hors packs à débloquer). */
-export const FREE_PAIRS = CATEGORIES.filter((c) => !c.pack).reduce((n, c) => n + c.pairs.length, 0);
-export const FREE_CATS = CATEGORIES.filter((c) => !c.pack).length;
+
+/**
+ * Sélection découverte, offerte à tous : des paires faciles prises à tour de rôle dans chaque thème
+ * de base, soit un mélange de 150 paires (300 mots) simples dans tous les domaines. Pour choisir ses
+ * thèmes et monter en difficulté, il faut débloquer des thèmes.
+ */
+export const DISCOVERY_SIZE = 150;
+export const DISCOVERY_CAT = { id: 'decouverte', name: 'Sélection découverte', hint: 'Un mélange de mots simples, dans tous les domaines' };
+export const DISCOVERY_PAIRS = (() => {
+  const easy = CATEGORIES.filter((c) => !c.extra).map((c) => c.pairs.filter((p) => p.lvl === 1));
+  const out = [];
+  for (let rank = 0; out.length < DISCOVERY_SIZE && easy.some((l) => l.length > rank); rank++) {
+    for (const l of easy) if (l.length > rank && out.length < DISCOVERY_SIZE) out.push(l[rank]);
+  }
+  return out;
+})();
 
 export function categoryName(id) {
   if (id === CUSTOM_CAT.id) return CUSTOM_CAT.name;
+  if (id === DISCOVERY_CAT.id) return DISCOVERY_CAT.name;
   const c = CATEGORIES.find((k) => k.id === id);
   return c ? c.name : id;
 }
@@ -56,10 +78,13 @@ export function categoryName(id) {
 export function buildPool({ cats, levels, custom }) {
   const catSet = new Set(cats), lvlSet = new Set(levels);
   const out = [];
+  const seen = new Set();
   for (const c of CATEGORIES) {
     if (!catSet.has(c.id)) continue;
-    for (const p of c.pairs) if (lvlSet.has(p.lvl)) out.push(p);
+    for (const p of c.pairs) if (lvlSet.has(p.lvl)) { out.push(p); seen.add(p.key); }
   }
+  // La sélection découverte ne dépend pas des niveaux ; une paire déjà apportée par son thème n'est pas doublée.
+  if (catSet.has(DISCOVERY_CAT.id)) for (const p of DISCOVERY_PAIRS) if (!seen.has(p.key)) out.push(p);
   if (catSet.has(CUSTOM_CAT.id)) {
     for (const p of custom || []) out.push({ a: p[0], b: p[1], lvl: 0, cat: CUSTOM_CAT.id, key: pairKey(p[0], p[1]) });
   }

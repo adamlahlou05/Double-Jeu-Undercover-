@@ -1,8 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Sauvegarde Android et transfert vers un nouveau téléphone (Android 12+) : joueurs, scores et historique. -->
+<!-- Android 12 et plus. Rien ne part dans la sauvegarde Google (les photos des joueurs restent sur le
+     téléphone, et une réinstallation repart de zéro). Le transfert direct vers un nouveau téléphone,
+     de câble à câble, reste possible. Les achats, eux, sont retrouvés par Google Play. -->
 <data-extraction-rules>
     <cloud-backup>
-        <include domain="file" path="." />
+        <exclude domain="root" path="." />
+        <exclude domain="file" path="." />
+        <exclude domain="database" path="." />
+        <exclude domain="sharedpref" path="." />
+        <exclude domain="external" path="." />
     </cloud-backup>
     <device-transfer>
         <include domain="file" path="." />

@@ -4,15 +4,15 @@
 import { escapeHtml as esc } from './text.js';
 import { icon, roleMark, brandMark, logoMark } from './icons.js';
 import { avatar, COLORS, FACES, faceId } from './avatars.js';
-import { CATEGORIES, CUSTOM_CAT, LEVELS, FREE_PAIRS, FREE_CATS, categoryName } from './words/index.js';
-import { shopActive, isPremium } from './shop.js';
+import { CATEGORIES, CUSTOM_CAT, DISCOVERY_CAT, DISCOVERY_PAIRS, LEVELS, TOTAL_PAIRS, categoryName } from './words/index.js';
+import { shopActive, isPremium, trialEnd } from './shop.js';
 import { reserveChip, shop as shopScreen } from './views-shop.js';
 import * as E from './engine.js';
 import { leaderboard, awards, winRate, average, emptyStats } from './stats.js';
 import { num, plural, pct, listNames, dayLabel, timeLabel, durationLabel } from './dom.js';
 import { isNative } from './store.js';
 import {
-  DB, S, APP_VERSION, TIMER_CHOICES, TABS, profileById, lookOf, stats, nightStats, activeGame, poolInfo, quickSetup, catOpen,
+  DB, S, APP_VERSION, TIMER_CHOICES, TABS, profileById, lookOf, stats, nightStats, activeGame, poolInfo, quickSetup, catOpen, discoveryOn,
 } from './state.js';
 
 export const st = (i) => `data-st style="--i:${i}"`;
@@ -76,7 +76,7 @@ export function home() {
     ${quick ? `<button class="btn soft block quick" data-act="quick-game"><span class="avs">${team.slice(0, 5).map((p) => avatar(p, 's28')).join('')}${team.length > 5 ? `<i class="more">+${team.length - 5}</i>` : ''}</span><span>Même équipe, on rejoue</span></button>` : ''}
     <button class="btn line block" data-act="go" data-to="rules">${icon('book', 20)}Règles du jeu</button>
   </div>
-  <p class="foot" ${st(4)}>${num(FREE_PAIRS)} paires de mots dans ${FREE_CATS} thèmes</p>
+  <p class="foot" ${st(4)}>${discoveryOn() ? `${num(DISCOVERY_PAIRS.length)} paires offertes, ${num(TOTAL_PAIRS)} avec l’illimité` : `${num(CATEGORIES.filter(catOpen).reduce((n, c) => n + c.pairs.length, 0))} paires de mots dans ${CATEGORIES.filter(catOpen).length} thèmes`}</p>
 </div>`;
 }
 
@@ -91,9 +91,9 @@ export function players() {
   const all = stats();
   const list = DB.profiles;
   const body = list.length
-    ? `<p class="lead">Les profils sont gardés d’une partie à l’autre, avec leurs scores.</p>
-       <div class="panel list">${list.map((p, i) => `<button class="row" data-act="go" data-to="player" data-id="${p.id}" ${st(Math.min(i, 10))}>${avatar(p, 's44')}<span class="grow"><span class="name">${esc(p.name)}</span><span class="meta">${statLine(all[p.id])}</span></span>${icon('next', 20)}</button>`).join('')}</div>`
-    : `<div class="empty">${avatar({ color: 'soleil', face: 'agent' }, 's96')}<h2>Personne à table pour l’instant</h2><p>Crée un profil par joueur : prénom, couleur, personnage ou photo. Ils seront là à chaque partie.</p></div>`;
+    ? `<p class="lead">Touche un joueur pour voir ses scores, le crayon pour changer son nom ou sa photo, la corbeille pour le supprimer.</p>
+       <div class="panel list">${list.map((p, i) => `<div class="row prow" ${st(Math.min(i, 10))}><button class="prow-main" data-act="go" data-to="player" data-id="${p.id}" aria-label="${esc(p.name)}, voir ses statistiques">${avatar(p, 's44')}<span class="grow"><span class="name">${esc(p.name)}</span><span class="meta">${statLine(all[p.id])}</span></span></button><button class="ibtn onpaper" data-act="profile-edit" data-id="${p.id}" aria-label="Modifier ${esc(p.name)}">${icon('edit', 20)}</button><button class="ibtn onpaper del" data-act="profile-delete" data-id="${p.id}" aria-label="Supprimer ${esc(p.name)}">${icon('trash', 20)}</button></div>`).join('')}</div>`
+    : `<div class="empty">${avatar({ color: 'soleil', face: 'agent' }, 's96')}<h2>Personne à table pour l’instant</h2><p>Crée un profil par joueur : prénom, couleur, personnage ou photo. Ils sont enregistrés sur ce téléphone et seront là à chaque partie.</p></div>`;
   return `${topBar('Joueurs')}<div class="scroll">${body}</div><div class="dock"><button class="btn sun block" data-act="profile-new">${icon('plus', 20)}Ajouter un joueur</button></div>`;
 }
 
@@ -124,7 +124,7 @@ export function profile() {
     ${d.photo ? '<p class="hint">La photo remplace le personnage. Elle reste sur ce téléphone.</p>' : ''}
     <div class="faces">${faces}</div>
   </div>
-
+  ${editing ? `<button class="btn del block" type="button" data-act="profile-delete">${icon('trash', 20)}Supprimer ce joueur</button>` : ''}
 </div>
 <div class="dock"><button class="btn sun block" data-act="profile-save">${editing ? 'Enregistrer' : 'Créer le joueur'}</button></div>`;
 }
@@ -162,17 +162,24 @@ export function setup() {
     return `${topBar('Qui joue ?', { back: true })}<div class="scroll"><div class="empty">${avatar({ color: 'menthe', face: 'renard' }, 's96')}<h2>Il faut des joueurs</h2><p>Crée au moins ${E.MIN_PLAYERS} profils pour lancer une partie.</p></div></div>
 <div class="dock"><button class="btn sun block" data-act="profile-new" data-then="setup">${icon('plus', 20)}Créer un joueur</button></div>`;
   }
+  const manage = !!S.manage;
   const tiles = DB.profiles.map((p) => {
     const at = s.players.indexOf(p.id);
+    if (manage) return `<button class="tile edit" data-act="profile-edit" data-id="${p.id}" data-then="setup" aria-label="Modifier ${esc(p.name)}">${avatar(p, 's56')}<span class="nm">${esc(p.name)}</span><i class="ord pen">${icon('edit', 15)}</i></button>`;
     return `<button class="tile${at >= 0 ? ' on' : ''}" data-act="setup-toggle" data-id="${p.id}" aria-pressed="${at >= 0}">${avatar(p, 's56')}<span class="nm">${esc(p.name)}</span>${at >= 0 ? `<i class="ord">${at + 1}</i>` : ''}</button>`;
   }).join('');
   const msg = n < E.MIN_PLAYERS ? `Encore ${plural(E.MIN_PLAYERS - n, 'joueur')} à choisir` : `${plural(n, 'joueur')} à table`;
-  return `${topBar('Qui joue ?', { back: true, right: n ? `<button class="btn soft sm" data-act="setup-clear">Vider</button>` : '' })}
+  const extra = manage
+    ? `<button class="tile add done" data-act="setup-manage" aria-pressed="true"><span class="plus">${icon('check', 26)}</span><span class="nm">Terminé</span></button>`
+    : `<button class="tile add" data-act="profile-new" data-then="setup"><span class="plus">${icon('plus', 26)}</span><span class="nm">Nouveau</span></button><button class="tile add" data-act="setup-manage" aria-pressed="false"><span class="plus">${icon('edit', 26)}</span><span class="nm">Modifier</span></button>`;
+  return `${topBar('Qui joue ?', { back: true, right: n && !manage ? `<button class="btn soft sm" data-act="setup-clear">Vider</button>` : '' })}
 <div class="scroll">
-  <p class="lead">Touche les joueurs dans l’ordre où vous êtes assis : c’est l’ordre des tours de parole.</p>
-  <div class="tiles">${tiles}<button class="tile add" data-act="profile-new" data-then="setup"><span class="plus">${icon('plus', 26)}</span><span class="nm">Nouveau</span></button></div>
+  <p class="lead">${manage ? 'Touche un joueur pour changer son nom, sa photo, ou le supprimer.' : 'Touche les joueurs dans l’ordre où vous êtes assis : c’est l’ordre des tours de parole.'}</p>
+  <div class="tiles">${tiles}${extra}</div>
 </div>
-<div class="dock col"><p class="dock-note">${msg}</p><button class="btn sun block" data-act="setup-next"${n < E.MIN_PLAYERS ? ' disabled' : ''}>Continuer</button></div>`;
+<div class="dock col">${manage
+    ? '<button class="btn sun block" data-act="setup-manage">Terminé</button>'
+    : `<p class="dock-note">${msg}</p><button class="btn sun block" data-act="setup-next"${n < E.MIN_PLAYERS ? ' disabled' : ''}>Continuer</button>`}</div>`;
 }
 
 function stepper(label, value, key, canMinus, canPlus, role) {
@@ -198,8 +205,12 @@ export function options() {
       </div>
       <p class="hint">${s.u === rec.u && s.w === rec.w ? `Composition conseillée pour ${n} joueurs.` : `<button class="link" data-act="role-reset">Revenir à la composition conseillée</button>`}</p>`;
   const levels = LEVELS.map((l) => `<button class="chip${s.levels.includes(l.id) ? ' on' : ''}" data-act="set-level" data-id="${l.id}" aria-pressed="${s.levels.includes(l.id)}">${l.name}</button>`).join('');
-  const nCats = s.cats.filter((c) => c !== CUSTOM_CAT.id || DB.meta.custom.length).length;
-  const allCats = CATEGORIES.every((c) => s.cats.includes(c.id)) && (!DB.meta.custom.length || s.cats.includes(CUSTOM_CAT.id));
+  const openList = CATEGORIES.filter(catOpen);
+  const nThemes = openList.filter((c) => s.cats.includes(c.id)).length;
+  const withDisco = discoveryOn() && s.cats.includes(DISCOVERY_CAT.id);
+  const themesLabel = !openList.length ? 'Sélection découverte'
+    : nThemes === openList.length && !discoveryOn() ? 'Tous les thèmes'
+      : `${nThemes ? `${nThemes} thème${nThemes > 1 ? 's' : ''}` : 'Aucun thème'}${withDisco ? ' et la sélection découverte' : ''}`;
   const timers = TIMER_CHOICES.map((t) => `<button class="chip${s.timer === t ? ' on' : ''}" data-act="set-timer" data-id="${t}" aria-pressed="${s.timer === t}">${t ? `${t / 60} min` : 'Sans'}</button>`).join('');
   return `${topBar('La partie', { back: true })}
 <div class="scroll">
@@ -208,8 +219,9 @@ export function options() {
   <div class="panel"><h3>Rôles</h3>${roles}</div>
   <div class="panel">
     <h3>Mots</h3>
-    <div class="chips">${levels}</div>
-    <button class="rowbtn" data-act="open-cats"><span class="grow"><b>Thèmes</b><span>${allCats ? 'Tous les thèmes' : `${nCats} thème${nCats > 1 ? 's' : ''} sur ${CATEGORIES.length + (DB.meta.custom.length ? 1 : 0)}`}</span></span>${icon('next', 20)}</button>
+    ${openList.length ? `<div class="chips">${levels}</div>` : ''}
+    <button class="rowbtn" data-act="open-cats"><span class="grow"><b>Thèmes</b><span>${themesLabel}</span></span>${icon('next', 20)}</button>
+    ${shopActive() && discoveryOn() && !openList.length ? `<button class="rowbtn teaser" data-act="shop-open"><span class="opt-ic gold">${icon('crown', 20)}</span><span class="grow"><b>Choisir ses thèmes et sa difficulté</b><span>${CATEGORIES.length} thèmes, ${num(TOTAL_PAIRS)} paires, niveaux Moyen et Corsé.</span></span>${icon('next', 20)}</button>` : ''}
     <p class="hint">${info.total ? `${plural(info.total, 'paire')} dans cette sélection, dont ${num(info.fresh)} jamais jouée${info.fresh > 1 ? 's' : ''}.` : 'Aucune paire dans cette sélection : ajoute un niveau ou un thème.'}</p>
   </div>
   <div class="panel">
@@ -231,18 +243,24 @@ export function catsSheet() {
   const s = S.setup;
   const used = new Set(DB.meta.used);
   const lv = new Set(s.levels);
-  const row = (id, name, hint, count, fresh) => `<button class="rowbtn check${s.cats.includes(id) ? ' on' : ''}" data-act="toggle-cat" data-id="${id}" aria-pressed="${s.cats.includes(id)}"><i class="box">${icon('check', 16)}</i><span class="grow"><b>${name}</b><span>${hint}</span></span><em>${count ? `${num(fresh)}/${num(count)}` : '0'}</em></button>`;
-  const locked = (c) => `<button class="rowbtn check locked" data-act="shop-open"><i class="box">${icon('lock', 14)}</i><span class="grow"><b>${c.name}</b><span>${c.hint}</span></span><em>${esc(S.shop.prices[c.pack] || 'Pack')}</em></button>`;
-  const rows = CATEGORIES.map((c) => {
-    if (!catOpen(c)) return shopActive() ? locked(c) : '';
-    const ps = c.pairs.filter((p) => lv.has(p.lvl));
-    return row(c.id, c.name, c.hint, ps.length, ps.filter((p) => !used.has(p.key)).length);
-  }).join('');
+  const now = Date.now();
+  const row = (id, name, hint, count, fresh, tag = '') => `<button class="rowbtn check${s.cats.includes(id) ? ' on' : ''}" data-act="toggle-cat" data-id="${id}" aria-pressed="${s.cats.includes(id)}"><i class="box">${icon('check', 16)}</i><span class="grow"><b>${name}${tag}</b><span>${hint}</span></span><em>${count ? `${num(fresh)}/${num(count)}` : '0'}</em></button>`;
+  const locked = (c) => `<button class="rowbtn check locked" data-act="unlock-open" data-id="${c.id}" aria-label="${esc(c.name)}, thème verrouillé"><i class="box">${icon('lock', 14)}</i><span class="grow"><b>${c.name}</b><span>${c.hint}</span></span><em>${num(c.pairs.length)}</em></button>`;
+  const open = [], shut = [];
+  for (const c of CATEGORIES) {
+    if (catOpen(c)) {
+      const ps = c.pairs.filter((p) => lv.has(p.lvl));
+      const end = shopActive() ? trialEnd(DB.meta.eco, c.id, now) : 0;
+      const tag = end ? `<i class="trial">essai, encore ${Math.max(1, Math.round((end - now) / 3600000))} h</i>` : '';
+      open.push(row(c.id, c.name, c.hint, ps.length, ps.filter((p) => !used.has(p.key)).length, tag));
+    } else if (shopActive()) shut.push(locked(c));
+  }
+  const disco = discoveryOn() ? row(DISCOVERY_CAT.id, DISCOVERY_CAT.name, DISCOVERY_CAT.hint, DISCOVERY_PAIRS.length, DISCOVERY_PAIRS.filter((p) => !used.has(p.key)).length, '<i class="trial free">offerte</i>') : '';
   const custom = DB.meta.custom.length ? row(CUSTOM_CAT.id, CUSTOM_CAT.name, CUSTOM_CAT.hint, DB.meta.custom.length, DB.meta.custom.length) : '';
   return `<div class="sheet tall" role="dialog" aria-label="Thèmes">
-  <div class="sheet-head"><h2>Thèmes</h2><button class="btn well sm" data-act="cats-all">Tout</button><button class="btn well sm" data-act="cats-none">Aucun</button></div>
-  <p class="hint">À droite : paires jamais jouées sur le total, pour les niveaux choisis.</p>
-  <div class="sheet-body">${custom}${rows}</div>
+  <div class="sheet-head"><h2>Thèmes</h2>${open.length ? '<button class="btn well sm" data-act="cats-all">Tout</button><button class="btn well sm" data-act="cats-none">Aucun</button>' : ''}</div>
+  <p class="hint">${shut.length ? 'Touche un thème verrouillé pour l’essayer avec une pub, ou le débloquer.' : 'À droite : paires jamais jouées sur le total, pour les niveaux choisis.'}</p>
+  <div class="sheet-body">${disco}${custom}${open.join('')}${shut.length ? `<h3 class="locksect">${icon('lock', 16)}À débloquer</h3>${shut.join('')}` : ''}</div>
   <button class="btn ink block" data-act="close-modal">Valider</button>
 </div>`;
 }
@@ -297,9 +315,11 @@ export function player(params) {
     ['Mot deviné en Mr. White', s.guessTries ? `${s.guessOk} sur ${s.guessTries}` : '–'],
     ['Votes sur un infiltré', s.votes ? `${pct(s.goodVotes / s.votes)} (vote secret)` : '–'],
   ].map(([k, v]) => `<div class="row"><span class="grow">${k}</span><b>${v}</b></div>`).join('');
-  return `${topBar(esc(p.name), { back: true, right: `<button class="ibtn" data-act="profile-edit" data-id="${p.id}" aria-label="Modifier le profil">${icon('edit')}</button>` })}
+  return `${topBar(esc(p.name), { back: true })}
 <div class="scroll">
-  <div class="preview">${avatar(p, 's120')}</div>
+  <div class="preview">${avatar(p, 's120')}
+    <div class="pvbtns"><button class="btn soft sm" data-act="profile-edit" data-id="${p.id}">${icon('edit', 18)}Modifier</button><button class="btn soft sm" data-act="profile-delete" data-id="${p.id}">${icon('trash', 18)}Supprimer</button></div>
+  </div>
   ${s.games ? `<div class="kpis">
     <div class="kpi"><b>${num(s.points)}</b><span>point${s.points > 1 ? 's' : ''}</span></div>
     <div class="kpi"><b>${num(s.games)}</b><span>partie${s.games > 1 ? 's' : ''}</span></div>

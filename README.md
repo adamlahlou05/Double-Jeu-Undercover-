@@ -13,8 +13,12 @@ Depuis la version 3, l’application est prévue pour le Play Store :
 - **Parties en réserve.** 3 parties offertes à l’installation (la première se joue donc sans rien de
   publicitaire), puis une pub vidéo regardée jusqu’au bout redonne 2 parties. Sans pub disponible
   (hors ligne), 2 parties par jour restent offertes.
-- **Double Jeu illimité** : un achat unique qui retire les pubs et ouvre tous les packs.
-- **Packs de thèmes** vendus à l’unité : Soirée, Politique & société, Foot.
+- **Sélection découverte offerte** : 150 paires faciles (300 mots) piochées dans tous les thèmes de base.
+- **Thèmes à débloquer.** Les 24 thèmes sont visibles, verrouillés. On les ouvre en achetant un pack, ou
+  l’illimité, ou en regardant une pub pour essayer un thème pendant 12 h.
+- **Double Jeu illimité** : un achat unique qui retire les pubs et ouvre tous les thèmes et niveaux.
+- **Huit packs** vendus à l’unité : Quotidien, Culture, Écrans & loisirs, Esprit, Soirée, Coquin,
+  Politique & société, Foot.
 
 Les pubs (Google AdMob, avec recueil du consentement) et les achats (Google Play) sont les seuls usages
 d’Internet. L’**appareil photo** n’est demandé que pour prendre une photo de profil, qui reste sur le
@@ -28,9 +32,9 @@ Pour publier : **[GUIDE-PUBLICATION.md](GUIDE-PUBLICATION.md)**. Textes et visue
 - **Trois modes** : Classique, Éclair (un seul vote) et Mystère (nombre d’infiltrés secret).
 - **Deux façons de voter** : à main levée, ou en secret sur le téléphone avec dépouillement automatique.
   Égalité : départage entre ex æquo, puis tirage au sort.
-- **2 229 paires de mots** dans 20 thèmes offerts et 3 niveaux (« Corsé » décoché par défaut), plus 198 paires
-  dans trois packs à débloquer, sans répétition tant que la sélection n’est pas épuisée,
-  plus vos propres paires (« Nos mots »). Un thème « Électricité & électronique » de 100 paires, du disjoncteur
+- **2 487 paires de mots** dans 24 thèmes et 3 niveaux (« Corsé » décoché par défaut), dont 150 offertes,
+  sans répétition tant que la sélection n’est pas épuisée, plus vos propres paires (« Nos mots »).
+  Dans un navigateur (sans boutique), les 20 thèmes de base sont ouverts. Un thème « Électricité & électronique » de 100 paires, du disjoncteur
   au régulateur PID.
 - **Tour de parole sur un seul écran** : l’ordre complet du tour (Mr. White ne parle jamais en premier)
   et un bouton « Passer au vote ». Rien à valider joueur par joueur.
@@ -57,7 +61,7 @@ web/                  le jeu : HTML, CSS, JavaScript sans dépendance ni étape 
   js/words/           bibliothèque de mots, un fichier par famille de thèmes
   js/stats.js         classements et statistiques, recalculés depuis l’historique
   js/store.js         sauvegarde locale (fichiers natifs sur Android, localStorage dans un navigateur)
-  js/shop.js          règles de la boutique : réserve de parties, récompense des pubs, packs
+  js/shop.js          règles de la boutique : réserve de parties, pubs, packs, essais de thèmes
   js/logo.js          le logo, dessiné en vectoriel
   js/views*.js        écrans ; js/app.js : gestes, navigation, enchaînement des phases
 android/              coque Android : WebView servie localement, sauvegarde sur fichiers, bouton retour,

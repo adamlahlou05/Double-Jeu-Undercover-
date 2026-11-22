@@ -1,5 +1,34 @@
 # Journal des versions
 
+## 3.1.0
+
+### Modèle économique
+
+- **Sélection découverte offerte** : 150 paires faciles (300 mots), piochées dans tous les thèmes de base.
+  C’est ce que joue une installation sans achat, sans choix de thème ni de niveau.
+- **Les 24 thèmes sont tous visibles, verrouillés.** Trois façons d’en ouvrir : acheter son pack, acheter
+  « Double Jeu illimité » (tout, sans pub), ou regarder une pub jusqu’au bout pour essayer un thème pendant 12 h.
+- **Huit packs** : Quotidien, Culture, Écrans & loisirs, Esprit (5 thèmes chacun), Soirée, Coquin, Politique &
+  société, Foot. Un pack ouvre ses thèmes mais ne retire pas les pubs ; l’illimité fait les deux.
+- **Nouveau thème « Coquin »** (60 paires : séduction, flirt, sous-entendus), vendu en pack, pour adultes.
+- La réserve de parties ne change pas : 3 offertes, +2 par pub vue jusqu’au bout, 2 parties de secours par
+  jour hors ligne. Aucune pub, ni essai par pub, avant la fin de la première partie.
+
+### Joueurs
+
+- **Modifier et supprimer depuis la liste** : un crayon et une corbeille sur chaque ligne de l’écran Joueurs.
+- Fiche d’un joueur : boutons « Modifier » et « Supprimer ». Éditeur : bouton « Supprimer ce joueur ».
+- Écran « Qui joue ? » : une tuile « Modifier » ; on touche ensuite un joueur pour changer son nom ou sa photo.
+- Une installation neuve ne contient aucun joueur (vérifié par un test automatique).
+
+### Sécurité
+
+- La page du jeu n’exécute que ses propres fichiers (politique de sécurité du contenu) et ne contacte aucun serveur.
+- Sauvegarde importée : photos et identifiants contrôlés strictement, tout enregistrement trafiqué est écarté.
+- Android : plus de copie des données dans la sauvegarde Google (les photos restent sur le téléphone, une
+  réinstallation repart de zéro) ; le transfert direct vers un nouveau téléphone reste possible. Trafic non
+  chiffré interdit, géolocalisation et ouverture de fenêtres désactivées dans la page.
+
 ## 3.0.0
 
 Version prévue pour le Play Store.

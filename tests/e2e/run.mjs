@@ -323,25 +323,72 @@ async function run(url) {
     await wait(700);
     d = await db();
     check(d.profiles.length === 7 && d.profiles[1].name === 'Léa', 'les profils ne survivent pas à un redémarrage');
-    // modification et suppression
+    // modification et suppression, directement depuis la liste des joueurs
     await gotoTab('players');
-    await tap(act('go', `[data-id="${d.profiles[6].id}"]`));
-    await settle();
-    await tap(act('profile-edit'));
+    const row = (id) => `.prow [data-id="${id}"]`;
+    check((await page.locator('.screen:not(.leave) .prow [data-act="profile-edit"]').count()) === 7 && (await page.locator('.screen:not(.leave) .prow [data-act="profile-delete"]').count()) === 7, 'chaque joueur doit avoir ses boutons Modifier et Supprimer dans la liste');
+    await shot('04b-joueurs-actions');
+    await tap(`${row(d.profiles[6].id)}[data-act="profile-edit"]`);
     await settle();
     check((await $('#pf-name').inputValue()) === '' && (await $('#pf-name').getAttribute('placeholder')) === 'Joueur 1', 'un nom par défaut doit se présenter comme un champ vide');
+    check(await exists('.btn.del[data-act="profile-delete"]'), 'l’éditeur ne propose pas de bouton « Supprimer ce joueur »');
     await tap(act('draft-photo-clear'));
     await $('#pf-name').fill('Noé B.');
     await tap(act('profile-save'));
     await settle();
     check((await db()).profiles[6].name === 'Noé B.' && (await db()).profiles[6].photo === '', 'modification du profil non enregistrée');
-    await tap(act('profile-edit'));
-    await settle();
-    await tap(act('profile-delete'));
+    check(await exists('.prow'), 'après une modification depuis la liste, on ne revient pas à la liste');
+    // annuler une suppression ne supprime rien
+    await tap(`${row(d.profiles[6].id)}[data-act="profile-delete"]`);
+    await wait(250);
+    check((await page.locator('#modal h2').innerText()).includes('Noé B.'), 'la confirmation ne nomme pas le joueur à supprimer');
+    await tap(act('close-modal'));
+    await wait(250);
+    check((await db()).profiles.length === 7, 'annuler la suppression supprime quand même');
+    await tap(`${row(d.profiles[6].id)}[data-act="profile-delete"]`);
     await wait(250);
     await tap(act('profile-delete-go'));
     await settle();
-    check((await db()).profiles.length === 6, 'suppression du profil non enregistrée');
+    check((await db()).profiles.length === 6 && (await exists('.prow')) && (await page.locator('.screen:not(.leave) .prow').count()) === 6, 'suppression depuis la liste non enregistrée');
+    // depuis la fiche d'un joueur : boutons Modifier et Supprimer, puis retour à la liste
+    await createProfile('Temp', 1, 2);
+    const temp = (await db()).profiles[6].id;
+    await tap(act('go', `[data-id="${temp}"]`));
+    await settle();
+    check(await exists('.pvbtns [data-act="profile-edit"]') && await exists('.pvbtns [data-act="profile-delete"]'), 'la fiche d’un joueur ne propose pas Modifier et Supprimer');
+    await tap(act('profile-edit'));
+    await settle();
+    await tap('.btn.del[data-act="profile-delete"]');
+    await wait(250);
+    await tap(act('profile-delete-go'));
+    await settle();
+    check((await db()).profiles.length === 6 && (await page.locator('.screen:not(.leave) .prow').count()) === 6, 'supprimer depuis l’éditeur ne ramène pas à la liste des joueurs');
+    // depuis « Qui joue ? » : la tuile Modifier ouvre le profil, puis retour au choix des joueurs
+    await gotoTab('home');
+    await tap(act('new-game'));
+    await settle();
+    await tap(act('setup-manage'));
+    await wait(200);
+    check((await page.locator('.screen:not(.leave) .tile.edit').count()) === 6 && !(await exists(act('setup-next'))), 'le mode Modifier de « Qui joue ? » ne s’affiche pas');
+    await shot('05b-qui-joue-modifier');
+    const sixth = (await db()).profiles[5];
+    await tap(`.tile.edit[data-id="${sixth.id}"]`);
+    await settle();
+    await $('#pf-name').fill('Inès M.');
+    await tap(act('profile-save'));
+    await settle();
+    check((await db()).profiles[5].name === 'Inès M.' && (await exists('.tile.edit')), 'modifier un joueur depuis « Qui joue ? » ne ramène pas au choix des joueurs');
+    await tap(`.tile.edit[data-id="${sixth.id}"]`);
+    await settle();
+    await $('#pf-name').fill(sixth.name);
+    await tap(act('profile-save'));
+    await settle();
+    await tap(act('setup-manage'));
+    await wait(200);
+    check((await exists(act('setup-next'))) && !(await exists('.tile.edit')), '« Terminé » ne referme pas le mode Modifier');
+    await tap(act('back'));
+    await settle();
+    check((await db()).profiles.length === 6 && (await db()).profiles[5].name === sixth.name, 'les joueurs ne sont pas dans l’état attendu après les essais de modification');
   });
 
   await scenario('partie classique à main levée, victoire des Civils', async () => {
@@ -990,7 +1037,7 @@ async function run(url) {
 
 /** Le pont natif de l'application Android, simulé : mêmes fonctions que la coque Java (window.DJNative). */
 async function nativeBridge(browser, url) {
-  await scenario('boutique (pont simulé) : réserve, pub avec récompense, secours hors ligne, packs, illimité', async () => {
+  await scenario('boutique (pont simulé) : sélection offerte, thèmes verrouillés, essai par pub, réserve, packs, illimité', async () => {
     check(!(await exists('.reserve')), 'hors application, la boutique ne doit pas apparaître');
     const main = page;
     const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, locale: 'fr-FR' });
@@ -1000,7 +1047,10 @@ async function nativeBridge(browser, url) {
       window.DJ_TEST = true;
       const calls = [];
       window.__calls = calls;
-      const shop = { owned: [], ad: 'earned', prices: { premium: '4,99 €', pack_soiree: '1,99 €', pack_politique: '1,99 €', pack_foot: '1,99 €' } };
+      const prices = { premium: '5,99 €' };
+      for (const id of ['pack_quotidien', 'pack_culture', 'pack_loisirs', 'pack_esprit']) prices[id] = '1,99 €';
+      for (const id of ['pack_soiree', 'pack_coquin', 'pack_politique', 'pack_foot']) prices[id] = '0,99 €';
+      const shop = { owned: [], ad: 'earned', prices };
       window.__shop = shop;
       const info = () => JSON.stringify({ ads: true, billing: true, owned: shop.owned, prices: shop.prices, privacy: true, test: true });
       window.DJNative = {
@@ -1018,43 +1068,97 @@ async function nativeBridge(browser, url) {
     });
     const calls = () => page.evaluate(() => window.__calls.slice());
     const eco = () => page.evaluate(() => JSON.parse(JSON.stringify(window.__dj.DB.meta.eco)));
+    const setup = () => page.evaluate(() => JSON.parse(JSON.stringify(window.__dj.S.setup)));
+    const locked = () => page.locator('#modal .rowbtn.locked').count();
     const abandon = async () => {
       await tap(act('game-menu')); await wait(300);
       await tap(act('ask-abandon')); await wait(250);
       await tap(act('do-abandon')); await settle();
     };
     const playOne = async () => { await gotoTab('home'); await tap(act('quick-game')); await settle(); };
+    const TOTAL = 24;
     try {
       await page.goto(url);
       await wait(800);
-      // premier lancement : des parties offertes, rien de publicitaire
+      // premier lancement : aucun joueur, des parties offertes, rien de publicitaire
+      check((await db()).profiles.length === 0, 'des joueurs existent dès le premier lancement');
       check((await text('.reserve b')).trim() === '3', 'la réserve de départ n’est pas affichée');
+      check((await text('.foot')).includes('150 paires offertes'), 'l’accueil n’annonce pas la sélection offerte');
       check((await calls()).length === 0, 'la pub est préparée dès le premier lancement');
       await shot('60-accueil-reserve');
       await gotoTab('players');
+      check(await exists('.empty'), 'l’écran Joueurs n’est pas vide au premier lancement');
       for (const [name, c, f] of PEOPLE.slice(0, 3)) await createProfile(name, c, f);
       await toOptions(3);
-      check((await page.evaluate(() => window.__dj.S.setup.levels.join())) === '1,2', 'le niveau Corsé doit être décoché par défaut');
-      // packs verrouillés dans la liste des thèmes
+      // sans achat : la sélection découverte seule, pas de choix de niveau
+      check((await setup()).cats.join() === 'decouverte', `sans achat, la sélection par défaut n’est pas la découverte (${(await setup()).cats.join()})`);
+      check((await setup()).levels.join() === '1,2', 'le niveau Corsé doit être décoché par défaut');
+      check(!(await exists('[data-act="set-level"]')), 'les niveaux sont proposés alors qu’aucun thème n’est débloqué');
+      check(await exists('.rowbtn.teaser'), 'rien n’invite à débloquer les thèmes');
+      check((await page.evaluate(async () => (await import('/js/state.js')).poolInfo(window.__dj.S.setup).total)) === 150, 'la sélection offerte ne fait pas 150 paires');
+      await shot('61-reglages-gratuit');
+      // tous les thèmes sont visibles, verrouillés
       await tap(act('open-cats')); await wait(350);
-      check((await page.locator('#modal .rowbtn.locked').count()) === 3, 'les trois packs ne sont pas montrés verrouillés');
-      check((await page.evaluate(() => window.__dj.S.setup.cats.some((c) => ['soiree', 'politique', 'foot'].includes(c)))) === false, 'un pack non acheté est jouable');
-      await shot('61-themes-packs');
+      check((await locked()) === TOTAL, `les ${TOTAL} thèmes ne sont pas montrés verrouillés (${await locked()})`);
+      check(await exists('[data-act="toggle-cat"][data-id="decouverte"].on'), 'la sélection découverte n’est pas cochée');
+      await shot('62-themes-verrouilles');
+      // avant la première partie : aucun essai par pub
+      await tap(act('unlock-open', '[data-id="foot"]')); await wait(350);
+      check((await exists('.shopsheet')) && !(await exists('[data-act="ad-watch"]')) && (await exists('.hint.early')), 'une pub est proposée avant la première partie');
+      check(await exists('[data-act="buy"][data-id="pack_foot"]') && await exists('[data-act="buy"][data-id="premium"]'), 'la feuille d’un thème ne propose pas son pack et l’illimité');
+      await page.locator('#modal [data-act="open-cats"]').click(); await wait(300);
+      check((await locked()) === TOTAL, '« Retour aux thèmes » ne ramène pas à la liste');
       await tap(act('close-modal')); await wait(250);
       await tap(act('start-game')); await settle();
       check((await game()) && (await eco()).credits === 2 && (await eco()).played === 1, 'la première partie ne consomme pas une partie de la réserve');
+      check((await page.evaluate(async () => { const { DISCOVERY_PAIRS } = await import('/js/words/index.js'); const g = window.__dj.DB.game; return DISCOVERY_PAIRS.some((p) => [p.a, p.b].includes(g.words.civil) && [p.a, p.b].includes(g.words.under)); })), 'la paire tirée ne vient pas de la sélection offerte');
       check(!(await calls()).includes('showRewarded') && !(await calls()).includes('adsWarmup'), 'de la publicité avant ou pendant la première partie');
       await abandon();
       await gotoTab('home');
       check((await calls()).includes('adsWarmup'), 'après la première partie, les pubs ne sont pas préparées');
-      await playOne(); await abandon();
-      await playOne(); await abandon();
-      check((await eco()).credits === 0, 'la réserve ne tombe pas à zéro après trois parties');
+      // essai d'un thème : pub quittée avant la fin, rien ; pub vue en entier, thème ouvert et coché
+      await toOptions(3);
+      await tap(act('open-cats')); await wait(350);
+      await tap(act('unlock-open', '[data-id="foot"]')); await wait(350);
+      await shot('63-theme-verrouille');
+      await page.evaluate(() => { window.__shop.ad = 'closed'; });
+      await tap(act('ad-watch')); await wait(400);
+      check((await text('.shopsheet .err')).includes('interrompue') && !(await eco()).trials.foot, 'une pub interrompue ouvre quand même le thème');
+      await page.evaluate(() => { window.__shop.ad = 'earned'; });
+      await tap(act('ad-watch')); await wait(500);
+      check((await eco()).trials.foot > Date.now() && (await setup()).cats.includes('foot'), 'la pub vue en entier n’ouvre pas le thème');
+      check((await exists('[data-act="toggle-cat"][data-id="foot"].on')) && (await locked()) === TOTAL - 1 && (await text('[data-id="foot"]')).includes('essai'), 'le thème à l’essai n’apparaît pas ouvert dans la liste');
+      check((await eco()).credits === 2, 'l’essai d’un thème ne doit pas toucher à la réserve de parties');
+      await shot('64-theme-essai');
+      await tap(act('close-modal')); await wait(250);
+      check(await exists('[data-act="set-level"]'), 'un thème ouvert doit rendre le choix du niveau');
+      // l'essai se termine : le thème se referme et n'est plus joué
+      // l'essai se termine alors que l'écran est encore ouvert, le thème coché seul : il n'est pas joué
+      await page.evaluate(() => { const d = window.__dj; d.DB.meta.eco.trials.foot = Date.now() - 1000; d.S.setup.cats = ['foot']; });
+      await tap(act('start-game')); await settle();
+      check((await game()) && (await game()).words.cat !== 'foot', 'un thème dont l’essai est terminé est encore joué');
+      check((await db()).meta.setup.cats.join() === 'decouverte' && (await eco()).credits === 1, 'essai terminé : la partie ne retombe pas sur la sélection offerte');
+      await abandon();
+      await toOptions(3);
+      check((await setup()).cats.join() === 'decouverte', 'un essai terminé laisse le thème dans la sélection');
+      // achat d'un pack depuis la feuille d'un thème : ses cinq thèmes s'ouvrent, cochés
+      await tap(act('open-cats')); await wait(350);
+      check((await locked()) === TOTAL, 'un essai terminé laisse le thème ouvert');
+      await tap(act('unlock-open', '[data-id="geo"]')); await wait(350);
+      await tap(act('buy', '[data-id="pack_culture"]')); await wait(500);
+      check((await calls()).includes('buy:pack_culture') && (await locked()) === TOTAL - 5, 'l’achat d’un pack n’ouvre pas ses cinq thèmes');
+      check((await page.evaluate(() => ['geo', 'histoire', 'culture', 'sciences', 'celebrites'].every((c) => window.__dj.S.setup.cats.includes(c)))), 'les thèmes du pack acheté ne sont pas cochés d’office');
+      check(await exists('[data-act="cats-all"]'), 'avec des thèmes ouverts, « Tout » doit être proposé');
+      await tap(act('close-modal')); await wait(250);
+      await tap(act('start-game')); await settle();
+      check((await game()) && (await eco()).credits === 0, 'un pack acheté ne dispense pas de la réserve de parties');
+      check(['geo', 'histoire', 'culture', 'sciences', 'celebrites'].includes((await game()).words.cat) || (await db()).meta.setup.cats.includes('decouverte'), 'la partie ne pioche pas dans le pack acheté');
+      await abandon();
       // réserve vide : la partie ne démarre pas, la feuille propose la pub ou l'illimité
       await gotoTab('home');
       await tap(act('quick-game')); await wait(400);
       check((await exists('.shopsheet')) && (await game()) === null, 'réserve vide : la partie démarre quand même');
-      await shot('62-reserve-vide');
+      await shot('65-reserve-vide');
       // pub quittée avant la fin : rien
       await page.evaluate(() => { window.__shop.ad = 'closed'; });
       await tap(act('ad-watch')); await wait(400);
@@ -1088,15 +1192,19 @@ async function nativeBridge(browser, url) {
       await playOne();
       check((await eco()).credits === before, 'en illimité, une partie consomme encore la réserve');
       await abandon();
-      // packs ouverts et cochés d'office, boutique à jour
+      // tout est ouvert et coché d'office, la sélection découverte disparaît, boutique à jour
       await toOptions(3);
-      check((await page.evaluate(() => ['soiree', 'politique', 'foot'].every((c) => window.__dj.S.setup.cats.includes(c)))), 'les packs débloqués ne sont pas cochés d’office');
+      check((await page.evaluate(() => ['objets', 'soiree', 'coquin', 'politique', 'foot', 'elec'].every((c) => window.__dj.S.setup.cats.includes(c)))), 'les thèmes débloqués par l’illimité ne sont pas cochés d’office');
+      check(!(await setup()).cats.includes('decouverte'), 'la sélection découverte reste cochée alors que tout est ouvert');
+      await tap(act('open-cats')); await wait(350);
+      check((await locked()) === 0 && !(await exists('[data-id="decouverte"]')), 'en illimité, il reste des thèmes verrouillés ou la sélection découverte');
+      await tap(act('close-modal')); await wait(250);
       await tap(act('back')); await settle();
       await tap(act('back')); await settle();
       await gotoTab('settings');
       await tap(act('go', '[data-to="shop"]')); await settle();
-      check((await page.locator('.screen:not(.leave) .owned').count()) >= 4, 'la boutique ne montre pas les achats débloqués');
-      await shot('63-boutique');
+      check((await page.locator('.screen:not(.leave) .owned').count()) >= 9, 'la boutique ne montre pas les achats débloqués');
+      await shot('66-boutique');
       await tap(act('shop-privacy'));
       await tap(act('shop-restore')); await wait(200);
       check((await calls()).includes('privacy') && (await calls()).includes('restore'), 'confidentialité ou restauration des achats non transmise');

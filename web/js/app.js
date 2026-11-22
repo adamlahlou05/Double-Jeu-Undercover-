@@ -5,7 +5,7 @@ import * as V from './views.js';
 import * as G from './views-game.js';
 import { morphHtml, typo } from './dom.js';
 import { sfx, buzz, configureFeedback } from './sfx.js';
-import { pickPair, buildPool, CATEGORIES, CUSTOM_CAT } from './words/index.js';
+import { pickPair, buildPool, CATEGORIES, CUSTOM_CAT, DISCOVERY_CAT } from './words/index.js';
 import { norm } from './text.js';
 import { suggestLook, avatarSprite, faceId } from './avatars.js';
 import * as Cam from './camera.js';
@@ -13,7 +13,7 @@ import * as Shop from './shop.js';
 import { exportPayload, parseImport, DEFAULT_SETTINGS } from './store.js';
 import {
   DB, S, TABS, save, go, back, tab, route, freshGui, profileById, defaultSetup, fitRoles, quickSetup,
-  invalidateStats, activeGame, newId, isDefaultName, nextDefaultName, openCats,
+  invalidateStats, activeGame, newId, isDefaultName, nextDefaultName, openCats, discoveryOn,
 } from './state.js';
 
 const $stage = document.getElementById('stage');
@@ -325,7 +325,11 @@ function confetti(winner) {
 function startGame(setup, note, free = false) {
   const players = setup.players.map(profileById).filter(Boolean);
   if (players.length < E.MIN_PLAYERS) { toast(`Il faut au moins ${E.MIN_PLAYERS} joueurs.`); return false; }
-  const sel = { cats: setup.cats, levels: setup.levels, custom: DB.meta.custom };
+  // Seuls les thèmes ouverts à cet instant sont joués : un essai a pu se terminer depuis que l'écran est affiché.
+  const open = openCats();
+  let cats = setup.cats.filter((c) => c === CUSTOM_CAT.id || (c === DISCOVERY_CAT.id ? discoveryOn() : open.includes(c)));
+  if (!cats.some((c) => c !== CUSTOM_CAT.id) && discoveryOn()) cats = cats.concat([DISCOVERY_CAT.id]);
+  const sel = { cats, levels: setup.levels, custom: DB.meta.custom };
   const picked = pickPair({ ...sel, used: DB.meta.used, recentWords: DB.meta.recent });
   if (!picked) { toast('Aucune paire de mots dans cette sélection.'); return false; }
   // Réserve vide : on propose une pub (ou l'illimité) avant de distribuer. Rien n'est encore modifié.
@@ -340,7 +344,7 @@ function startGame(setup, note, free = false) {
   DB.meta.recent = DB.meta.recent.concat([picked.pair.a, picked.pair.b]).slice(-24);
   DB.meta.setup = {
     players: setup.players.slice(), mode: setup.mode, u: setup.u, w: setup.w, auto: setup.auto,
-    cats: setup.cats.slice(), known: Array.isArray(setup.known) ? setup.known.slice() : openCats(), rev: 3, levels: setup.levels.slice(), vote: setup.vote, timer: setup.timer, notes: setup.notes,
+    cats: cats.slice(), known: Array.isArray(setup.known) ? setup.known.slice() : open, rev: 3, levels: setup.levels.slice(), vote: setup.vote, timer: setup.timer, notes: setup.notes,
   };
   save('meta');
   stopTimers();
@@ -471,16 +475,24 @@ function openReserve(pending = null) {
 
 /** La coque a fini d'afficher (ou pas) la pub : 'earned' si elle a été vue jusqu'au bout. */
 function adResult(status) {
-  const m = S.modal && S.modal.type === 'reserve' ? S.modal : null;
-  const pending = m ? m.pending : null;
-  if (status === 'earned') {
+  const m = S.modal && (S.modal.type === 'reserve' || S.modal.type === 'unlock') ? S.modal : null;
+  const pending = m && m.type === 'reserve' ? m.pending : null;
+  if (status === 'earned' && m && m.type === 'unlock') {
+    // Pub vue en entier pour essayer un thème : il s'ouvre quelques heures et il est coché d'office.
+    DB.meta.eco = Shop.grantTrial(DB.meta.eco, m.cat);
+    save('meta');
+    sfx.good();
+    if (S.setup) { if (!S.setup.cats.includes(m.cat)) S.setup.cats.push(m.cat); S.setup.known = openCats(); }
+    S.modal = S.setup ? { type: 'cats' } : null;
+    toast(`Thème ouvert pour ${Shop.SHOP.TRIAL_HOURS} h.`);
+  } else if (status === 'earned') {
     DB.meta.eco = Shop.reward(DB.meta.eco);
     save('meta');
     sfx.good();
     if (m) S.modal = null;
     if (pending) startGame(pending.setup, pending.note); else toast(`+${Shop.SHOP.REWARD} parties en réserve.`);
   } else if (status === 'closed') {
-    if (m) { m.busy = false; m.msg = 'Pub interrompue avant la fin : aucune partie gagnée.'; }
+    if (m) { m.busy = false; m.msg = m.type === 'unlock' ? 'Pub interrompue avant la fin : le thème reste verrouillé.' : 'Pub interrompue avant la fin : aucune partie gagnée.'; }
   } else if (pending && Shop.rescuesLeft(DB.meta.eco) > 0) {
     // Aucune pub disponible (hors ligne, panne) : on ne bloque pas la soirée, dans la limite du jour.
     DB.meta.eco = Shop.useRescue(DB.meta.eco);
@@ -499,6 +511,8 @@ function shopChanged(json) {
   const was = Shop.isPremium(DB.meta.eco);
   readShop(json);
   const m = S.modal && S.modal.type === 'reserve' ? S.modal : null;
+  // Achat fait depuis la feuille d'un thème verrouillé : s'il est maintenant ouvert, retour à la liste des thèmes.
+  if (S.modal && S.modal.type === 'unlock' && openCats().includes(S.modal.cat)) S.modal = S.setup ? { type: 'cats' } : null;
   if (!was && Shop.isPremium(DB.meta.eco)) {
     sfx.win();
     toast('Jeu illimité débloqué. Merci !');
@@ -591,9 +605,10 @@ const ACT = {
       return;
     }
     S.setup = defaultSetup();
+    S.manage = false;
     go('setup');
   },
-  'new-game-go'() { S.modal = null; dropGame(); S.setup = defaultSetup(); go('setup'); },
+  'new-game-go'() { S.modal = null; dropGame(); S.setup = defaultSetup(); S.manage = false; go('setup'); },
   'quick-game'() { const s = quickSetup(); if (s) startGame(s); },
   resume() { prepareResume(); go('game'); },
 
@@ -608,7 +623,7 @@ const ACT = {
     if (!p) return;
     // Un nom par défaut (« Joueur 3 ») n'est qu'une indication : le champ s'ouvre vide, prêt à recevoir le vrai nom.
     const auto = isDefaultName(p.name);
-    S.draft = { id: p.id, name: auto ? '' : p.name, fallback: auto ? p.name : nextDefaultName(p.id), color: p.color, face: faceId(p.face), photo: p.photo || '', error: '', then: '' };
+    S.draft = { id: p.id, name: auto ? '' : p.name, fallback: auto ? p.name : nextDefaultName(p.id), color: p.color, face: faceId(p.face), photo: p.photo || '', error: '', then: d.then || '' };
     go('profile');
   },
   'draft-color'(d) { S.draft.color = d.id; },
@@ -638,20 +653,30 @@ const ACT = {
     S.modal = null;
   },
   'profile-save'() { saveProfile(); },
-  'profile-delete'() {
-    const p = profileById(S.draft && S.draft.id);
+  'profile-delete'(d) {
+    // Depuis la liste ou la fiche d'un joueur (identifiant porté par le bouton), ou depuis l'éditeur.
+    const p = profileById((d && d.id) || (S.draft && S.draft.id));
     if (!p) return;
-    confirm({ title: `Supprimer ${p.name} ?`, text: 'Son profil disparaît du classement. Les parties déjà jouées restent dans l’historique.', yes: 'Supprimer', act: 'profile-delete-go', danger: true, who: p });
+    confirm({ title: `Supprimer ${p.name} ?`, text: 'Son profil disparaît du classement. Les parties déjà jouées restent dans l’historique.', yes: 'Supprimer', act: 'profile-delete-go', danger: true, who: p, id: p.id });
   },
   'profile-delete-go'() {
-    const id = S.draft && S.draft.id;
+    const id = S.modal && S.modal.id;
+    S.modal = null;
+    if (!id) return;
     DB.profiles = DB.profiles.filter((p) => p.id !== id);
     if (DB.meta.setup && Array.isArray(DB.meta.setup.players)) { DB.meta.setup.players = DB.meta.setup.players.filter((x) => x !== id); save('meta'); }
     if (S.setup) { S.setup.players = S.setup.players.filter((x) => x !== id); fitRoles(S.setup); }
     save('profiles');
-    S.draft = null;
-    S.modal = null;
-    tab('players');
+    invalidateStats();
+    if (S.draft && S.draft.id === id) S.draft = null;
+    // On quitte les écrans qui parlaient de ce joueur (éditeur, fiche) et on revient d'où l'on venait.
+    const gone = (r) => r.name === 'profile' || (r.name === 'player' && r.params.id === id);
+    if (gone(route())) {
+      while (S.stack.length > 1 && gone(route())) S.stack.pop();
+      S.dir = 'back';
+    }
+    if (!DB.profiles.length) S.manage = false;
+    toast('Joueur supprimé.');
   },
 
   /* Préparation */
@@ -664,7 +689,8 @@ const ACT = {
     sfx.tap();
   },
   'setup-clear'() { S.setup.players = []; fitRoles(S.setup); },
-  'setup-next'() { if (S.setup.players.length >= E.MIN_PLAYERS) { fitRoles(S.setup); go('options'); } },
+  'setup-manage'() { S.manage = !S.manage; },
+  'setup-next'() { if (S.setup.players.length >= E.MIN_PLAYERS) { S.manage = false; fitRoles(S.setup); go('options'); } },
   'set-mode'(d) { if (E.MODES[d.id]) S.setup.mode = d.id; },
   'role-step'(d) {
     const s = S.setup;
@@ -683,7 +709,7 @@ const ACT = {
     const s = S.setup;
     s.cats = s.cats.includes(d.id) ? s.cats.filter((c) => c !== d.id) : s.cats.concat(d.id);
   },
-  'cats-all'() { S.setup.cats = openCats().concat(DB.meta.custom.length ? [CUSTOM_CAT.id] : []); },
+  'cats-all'() { S.setup.cats = openCats().concat(discoveryOn() ? [DISCOVERY_CAT.id] : [], DB.meta.custom.length ? [CUSTOM_CAT.id] : []); },
   'cats-none'() { S.setup.cats = []; },
   'set-vote'(d) { S.setup.vote = d.id === 'secret' ? 'secret' : 'open'; },
   'set-timer'(d) { S.setup.timer = Number(d.id) || 0; },
@@ -691,11 +717,14 @@ const ACT = {
   'start-game'() { startGame(S.setup); },
 
   /* Boutique */
+  'unlock-open'(d) { if (Shop.shopActive() && CATEGORIES.some((c) => c.id === d.id)) S.modal = { type: 'unlock', cat: d.id, busy: false, msg: '' }; },
   'shop-open'() { S.modal = null; if (route().name !== 'shop') go('shop'); },
   'reserve-open'() { if (Shop.shopActive() && !Shop.isPremium(DB.meta.eco)) openReserve(); return false; },
   'ad-watch'() {
     const m = S.modal;
-    if (!m || m.type !== 'reserve' || m.busy || !native) return false;
+    if (!m || (m.type !== 'reserve' && m.type !== 'unlock') || m.busy || !native) return false;
+    // Rien de publicitaire tant que la première partie n'a pas été lancée.
+    if (m.type === 'unlock' && DB.meta.eco.played < 1) return false;
     m.busy = true; m.msg = '';
     render();
     try { native.showRewarded(); } catch (e) { adResult('unavailable'); }

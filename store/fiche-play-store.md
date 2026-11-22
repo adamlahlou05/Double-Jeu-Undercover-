@@ -33,7 +33,7 @@ COMMENT ON JOUE
 • Les Civils gagnent en démasquant les intrus. L'Undercover et Mr. White gagnent s'ils tiennent jusqu'au bout. Mr. White peut aussi tout renverser en devinant le mot.
 
 CE QU'IL Y A DANS LE JEU
-• Plus de 2 200 paires de mots dans 20 thèmes : objets, cuisine, cinéma, sport, sciences, expressions, humour…
+• Près de 2 500 paires de mots dans 24 thèmes : objets, cuisine, cinéma, sport, sciences, expressions, humour, soirée, foot…
 • Trois niveaux de difficulté : facile, moyen, corsé.
 • Trois modes : Classique, Éclair (un seul vote) et Mystère (nombre d'intrus secret).
 • Mr. White ne parle jamais en premier.
@@ -46,8 +46,14 @@ CE QU'IL Y A DANS LE JEU
 SANS CONNEXION
 Le jeu se joue sans Internet : en soirée, en voiture, en vacances. Les joueurs, les photos et les scores restent sur le téléphone.
 
-GRATUIT, AVEC DES PARTIES OFFERTES
-Les premières parties sont offertes, sans publicité. Ensuite, une courte vidéo regardée jusqu'au bout redonne des parties. L'achat unique « Double Jeu illimité » retire les publicités pour toujours et ouvre tous les packs de thèmes (Soirée, Politique & société, Foot).
+GRATUIT POUR COMMENCER
+• 150 paires de mots offertes : une sélection de mots simples, dans tous les domaines.
+• Les premières parties sont offertes, sans publicité. Ensuite, une courte vidéo regardée jusqu'au bout redonne des parties.
+• Envie d'un thème précis ? Une vidéo l'ouvre pendant 12 heures.
+
+POUR ALLER PLUS LOIN
+• Les thèmes se débloquent par packs : Quotidien, Culture, Écrans & loisirs, Esprit, Soirée, Coquin (pour adultes), Politique & société, Foot.
+• L'achat unique « Double Jeu illimité » ouvre tous les thèmes et tous les niveaux, et retire les publicités pour toujours.
 
 Idéal pour un apéro, une soirée entre amis, un repas de famille ou un trajet. Si vous aimez les jeux d'imposteur, de bluff et de mots, vous êtes au bon endroit.
 ```
@@ -78,5 +84,5 @@ Ne cite aucune autre appli ou marque dans la fiche (pas de « comme… », pas d
 ## Notes de version (premier envoi)
 
 ```
-Première version : 2 200 paires de mots, 20 thèmes, 3 modes de jeu, profils et classement.
+Première version : près de 2 500 paires de mots, 24 thèmes, 3 modes de jeu, profils et classement.
 ```

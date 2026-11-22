@@ -2,12 +2,12 @@
 
 import { loadDb, persist } from './store.js';
 import { computeStats } from './stats.js';
-import { CATEGORIES, CUSTOM_CAT, buildPool } from './words/index.js';
+import { CATEGORIES, CUSTOM_CAT, DISCOVERY_CAT, buildPool } from './words/index.js';
 import * as E from './engine.js';
 import { norm } from './text.js';
-import { shopActive, ownsPack } from './shop.js';
+import { shopActive, themeOpen } from './shop.js';
 
-export const APP_VERSION = '3.0.0';
+export const APP_VERSION = '3.1.0';
 export const TIMER_CHOICES = [0, 60, 120, 180, 300];
 
 export const DB = loadDb();
@@ -34,6 +34,8 @@ export const S = {
   toast: null,
   setup: null,
   draft: null,
+  // Écran « Qui joue ? » en mode modification : toucher un joueur ouvre son profil.
+  manage: false,
   gui: freshGui(),
   rank: { tab: 'all', sort: 'points' },
   // Ce que la coque Android sait de la boutique : prix affichés par Google Play, pubs prêtes ou non.
@@ -106,8 +108,14 @@ export const activeGame = () => (DB.game && DB.game.phase !== 'end' ? DB.game : 
 
 const ALL_CATS = CATEGORIES.map((c) => c.id);
 
-/** Un thème de pack n'est jouable que s'il a été débloqué (ou avec le jeu illimité). Hors application : jamais. */
-export const catOpen = (c) => !c.pack || (shopActive() && ownsPack(DB.meta.eco, c.pack));
+/**
+ * Un thème est jouable s'il a été débloqué : pack acheté, jeu illimité, ou essai en cours après une pub.
+ * Hors de l'application Android (navigateur), il n'y a pas de boutique : la bibliothèque de base est
+ * ouverte, les thèmes vendus en plus ne le sont pas.
+ */
+export const catOpen = (c) => (shopActive() ? themeOpen(DB.meta.eco, c) : !c.extra);
+/** La sélection découverte n'est proposée que s'il reste des thèmes de base verrouillés. */
+export const discoveryOn = () => CATEGORIES.some((c) => !c.extra && !catOpen(c));
 /** Identifiants des thèmes jouables sur cet appareil. */
 export const openCats = () => CATEGORIES.filter(catOpen).map((c) => c.id);
 // Thèmes de la version 2.0 : sert à repérer les thèmes ajoutés depuis par une mise à jour.
@@ -119,12 +127,13 @@ export function defaultSetup() {
   const last = DB.meta.setup || {};
   const players = (Array.isArray(last.players) ? last.players : []).filter((id) => profileById(id)).slice(0, E.MAX_PLAYERS);
   const open = openCats();
-  let cats = Array.isArray(last.cats) ? last.cats.filter((c) => open.includes(c) || c === CUSTOM_CAT.id) : open.slice();
+  const disco = discoveryOn();
+  let cats = Array.isArray(last.cats) ? last.cats.filter((c) => open.includes(c) || c === CUSTOM_CAT.id || (disco && c === DISCOVERY_CAT.id)) : open.slice();
   // Un thème apparu avec une mise à jour, ou un pack qui vient d'être débloqué, est coché d'office :
   // il ne peut pas avoir été écarté par le joueur.
   const known = Array.isArray(last.known) ? last.known : CATS_V20;
   if (Array.isArray(last.cats)) for (const c of open) if (!known.includes(c) && !cats.includes(c)) cats.push(c);
-  if (!cats.length) cats = open.slice();
+  if (!cats.filter((c) => c !== CUSTOM_CAT.id).length) cats = cats.concat(disco ? [DISCOVERY_CAT.id] : open);
   let levels = Array.isArray(last.levels) ? last.levels.filter((l) => [1, 2, 3].includes(l)) : [1, 2];
   // Le niveau « Corsé » est décoché par défaut. Les réglages enregistrés avant la version 3 sont remis
   // sur ce défaut une fois ; ensuite, le choix du joueur est conservé.
