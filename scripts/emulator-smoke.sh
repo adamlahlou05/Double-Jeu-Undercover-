@@ -57,7 +57,9 @@ adb shell am start -W -n "$PKG/.MainActivity" >/dev/null
 wait_for "Jouer"
 
 adb logcat -d > "$OUT/logcat.txt" || true
-if grep -E "FATAL EXCEPTION|Force finishing activity $PKG" "$OUT/logcat.txt"; then
+# Seuls les plantages de l'application comptent : l'outil de lecture d'écran (uiautomator) peut
+# lui-même tomber sans que le jeu y soit pour rien.
+if grep -E "AndroidRuntime: Process: $PKG|Force finishing activity $PKG|ANR in $PKG" "$OUT/logcat.txt"; then
   echo "ÉCHEC : plantage détecté dans les journaux" >&2
   exit 1
 fi
