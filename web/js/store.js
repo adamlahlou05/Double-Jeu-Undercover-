@@ -3,6 +3,7 @@
 // par la coque native (window.DJNative) ; dans un navigateur, on se rabat sur localStorage.
 
 import { upgradeGame } from './engine.js';
+import { cleanEco } from './shop.js';
 
 const NS = 'dj2:';
 const KEYS = ['meta', 'profiles', 'history', 'game'];
@@ -69,6 +70,8 @@ function cleanMeta(m) {
     recent: arr(m.recent).filter((k) => typeof k === 'string').slice(-24),
     custom: arr(m.custom).filter((p) => Array.isArray(p) && p.length === 2 && p[0] && p[1]).map((p) => [str(p[0], 40), str(p[1], 40)]),
     rulesSeen: !!m.rulesSeen,
+    // Réserve de parties et achats connus (voir shop.js).
+    eco: cleanEco(m.eco),
   };
 }
 

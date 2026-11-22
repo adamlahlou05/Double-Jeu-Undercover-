@@ -4,13 +4,15 @@
 import { escapeHtml as esc } from './text.js';
 import { icon, roleMark, brandMark } from './icons.js';
 import { avatar, COLORS, FACES, faceId } from './avatars.js';
-import { CATEGORIES, CUSTOM_CAT, LEVELS, TOTAL_PAIRS, categoryName } from './words/index.js';
+import { CATEGORIES, CUSTOM_CAT, LEVELS, FREE_PAIRS, FREE_CATS, categoryName } from './words/index.js';
+import { shopActive, isPremium } from './shop.js';
+import { reserveChip, shop as shopScreen } from './views-shop.js';
 import * as E from './engine.js';
 import { leaderboard, awards, winRate, average, emptyStats } from './stats.js';
 import { num, plural, pct, listNames, dayLabel, timeLabel, durationLabel } from './dom.js';
 import { isNative } from './store.js';
 import {
-  DB, S, APP_VERSION, TIMER_CHOICES, TABS, profileById, lookOf, stats, nightStats, activeGame, poolInfo, quickSetup,
+  DB, S, APP_VERSION, TIMER_CHOICES, TABS, profileById, lookOf, stats, nightStats, activeGame, poolInfo, quickSetup, catOpen,
 } from './state.js';
 
 export const st = (i) => `data-st style="--i:${i}"`;
@@ -60,6 +62,7 @@ export function home() {
   const quick = !g && quickSetup();
   const team = quick ? quick.players.map(profileById) : [];
   return `<div class="scroll home">
+  ${reserveChip()}
   <header class="brandrow" ${st(0)}><h1 class="wordmark">Double<br>Jeu</h1>${brandMark(64)}</header>
   <p class="tagline" ${st(1)}>Un mot secret, un intrus, et beaucoup de bluff.</p>
   <div class="hero" aria-hidden="true">
@@ -73,7 +76,7 @@ export function home() {
     ${quick ? `<button class="btn soft block quick" data-act="quick-game"><span class="avs">${team.slice(0, 5).map((p) => avatar(p, 's28')).join('')}${team.length > 5 ? `<i class="more">+${team.length - 5}</i>` : ''}</span><span>Même équipe, on rejoue</span></button>` : ''}
     <button class="btn line block" data-act="go" data-to="rules">${icon('book', 20)}Règles du jeu</button>
   </div>
-  <p class="foot" ${st(4)}>${num(TOTAL_PAIRS)} paires de mots dans ${CATEGORIES.length} thèmes</p>
+  <p class="foot" ${st(4)}>${num(FREE_PAIRS)} paires de mots dans ${FREE_CATS} thèmes</p>
 </div>`;
 }
 
@@ -103,7 +106,10 @@ export function profile() {
   const faces = FACES.map((f) => `<button class="facebtn${!d.photo && mine === f.id ? ' on' : ''}" data-act="draft-face" data-id="${f.id}" aria-label="${esc(f.name)}" aria-pressed="${!d.photo && mine === f.id}">${avatar({ color: d.color, face: f.id }, 's56')}</button>`).join('');
   return `${topBar(editing ? 'Modifier le profil' : 'Nouveau joueur', { back: true, right: editing ? `<button class="ibtn" data-act="profile-delete" aria-label="Supprimer ce joueur">${icon('trash')}</button>` : '' })}
 <div class="scroll">
-  <div class="preview">${avatar(d, 's120')}</div>
+  <div class="preview">
+    <div class="pv">${avatar(d, 's120')}<button class="pvcam" type="button" data-act="camera-open" aria-label="${d.photo ? 'Refaire la photo' : 'Prendre une photo'}">${icon('camera', 22)}</button></div>
+    <div class="pvbtns"><button class="btn soft sm" type="button" data-act="camera-open">${icon('camera', 18)}${d.photo ? 'Refaire la photo' : 'Prendre une photo'}</button>${d.photo ? `<button class="btn soft sm" type="button" data-act="draft-photo-clear">${icon('close', 18)}Retirer</button>` : ''}</div>
+  </div>
   <form class="panel" data-form="profile" novalidate>
     <label class="lbl" for="pf-name">Prénom ou surnom</label>
     <input class="field" id="pf-name" data-in="draft-name" value="${esc(d.name)}" maxlength="16" autocomplete="off" autocapitalize="words" spellcheck="false" enterkeyhint="done" placeholder="${esc(d.fallback)}">
@@ -115,16 +121,10 @@ export function profile() {
   </div>
   <div class="panel">
     <h3>Personnage</h3>
+    ${d.photo ? '<p class="hint">La photo remplace le personnage. Elle reste sur ce téléphone.</p>' : ''}
     <div class="faces">${faces}</div>
   </div>
-  <div class="panel">
-    <h3>Ou une photo</h3>
-    <p class="hint">${d.photo ? 'La photo remplace le personnage. Elle reste sur ce téléphone.' : 'Un selfie à la place du personnage. La photo reste sur ce téléphone.'}</p>
-    <div class="photo-btns">
-      <button class="btn well sm" type="button" data-act="camera-open">${icon('camera', 20)}${d.photo ? 'Refaire la photo' : 'Prendre une photo'}</button>
-      ${d.photo ? `<button class="btn well sm" type="button" data-act="draft-photo-clear">${icon('close', 20)}Retirer la photo</button>` : ''}
-    </div>
-  </div>
+
 </div>
 <div class="dock"><button class="btn sun block" data-act="profile-save">${editing ? 'Enregistrer' : 'Créer le joueur'}</button></div>`;
 }
@@ -232,7 +232,9 @@ export function catsSheet() {
   const used = new Set(DB.meta.used);
   const lv = new Set(s.levels);
   const row = (id, name, hint, count, fresh) => `<button class="rowbtn check${s.cats.includes(id) ? ' on' : ''}" data-act="toggle-cat" data-id="${id}" aria-pressed="${s.cats.includes(id)}"><i class="box">${icon('check', 16)}</i><span class="grow"><b>${name}</b><span>${hint}</span></span><em>${count ? `${num(fresh)}/${num(count)}` : '0'}</em></button>`;
+  const locked = (c) => `<button class="rowbtn check locked" data-act="shop-open"><i class="box">${icon('lock', 14)}</i><span class="grow"><b>${c.name}</b><span>${c.hint}</span></span><em>${esc(S.shop.prices[c.pack] || 'Pack')}</em></button>`;
   const rows = CATEGORIES.map((c) => {
+    if (!catOpen(c)) return shopActive() ? locked(c) : '';
     const ps = c.pairs.filter((p) => lv.has(p.lvl));
     return row(c.id, c.name, c.hint, ps.length, ps.filter((p) => !used.has(p.key)).length);
   }).join('');
@@ -450,6 +452,7 @@ export function settings() {
   const usedN = DB.meta.used.length;
   return `${topBar('Réglages')}
 <div class="scroll">
+  ${shopActive() ? `<div class="panel list"><button class="rowbtn" data-act="go" data-to="shop"><span class="opt-ic gold">${icon('crown', 20)}</span><span class="grow"><b>Boutique</b><span>${isPremium(DB.meta.eco) ? 'Jeu illimité débloqué.' : `${plural(DB.meta.eco.credits, 'partie')} en réserve. Illimité, packs de thèmes.`}</span></span>${icon('next', 18)}</button></div>` : ''}
   <div class="panel"><h3>Apparence</h3><div class="seg">${themes}</div><p class="hint">Auto suit le thème clair ou sombre du téléphone.</p></div>
   <div class="panel list">
     ${switchRow('toggle-sound', 'Sons', 'Petits effets à la révélation et à la victoire.', s.sound, 'sound')}
@@ -459,7 +462,7 @@ export function settings() {
   <h2 class="sect">Mots</h2>
   <div class="panel list">
     <button class="rowbtn" data-act="go" data-to="custom"><span class="opt-ic">${icon('words', 20)}</span><span class="grow"><b>Nos mots</b><span>${DB.meta.custom.length ? plural(DB.meta.custom.length, 'paire') + ' ajoutée' + (DB.meta.custom.length > 1 ? 's' : '') + ' par ton groupe' : 'Ajoute vos propres paires : prénoms, lieux, blagues du groupe.'}</span></span>${icon('next', 20)}</button>
-    <button class="rowbtn" data-act="ask-reset-used"${usedN ? '' : ' disabled'}><span class="opt-ic">${icon('replay', 20)}</span><span class="grow"><b>Rejouer les mots déjà sortis</b><span>${usedN ? `${plural(usedN, 'paire')} déjà jouée${usedN > 1 ? 's' : ''} sur ${num(TOTAL_PAIRS + DB.meta.custom.length)}.` : 'Aucune paire jouée pour l’instant.'}</span></span></button>
+    <button class="rowbtn" data-act="ask-reset-used"${usedN ? '' : ' disabled'}><span class="opt-ic">${icon('replay', 20)}</span><span class="grow"><b>Rejouer les mots déjà sortis</b><span>${usedN ? `${plural(usedN, 'paire')} déjà jouée${usedN > 1 ? 's' : ''} sur ${num(CATEGORIES.filter(catOpen).reduce((n, c) => n + c.pairs.length, 0) + DB.meta.custom.length)}.` : 'Aucune paire jouée pour l’instant.'}</span></span></button>
   </div>
   <h2 class="sect">Données</h2>
   <div class="panel list">
@@ -469,7 +472,7 @@ export function settings() {
     <button class="rowbtn danger" data-act="ask-reset-scores"${DB.history.length ? '' : ' disabled'}><span class="opt-ic">${icon('trash', 20)}</span><span class="grow"><b>Effacer les scores et l’historique</b><span>Les profils des joueurs sont conservés.</span></span></button>
     <button class="rowbtn danger" data-act="ask-reset-all"><span class="opt-ic">${icon('trash', 20)}</span><span class="grow"><b>Tout effacer</b><span>Joueurs, scores, historique, mots perso et réglages.</span></span></button>
   </div>
-  <p class="foot">Double Jeu ${APP_VERSION}. Tout fonctionne hors ligne${isNative ? ' et tes données restent sur ce téléphone' : ' ; dans un navigateur, les données restent dans celui-ci'}. L’appareil photo ne sert qu’aux photos de profil : elles ne quittent pas l’appareil.</p>
+  <p class="foot">Double Jeu ${APP_VERSION}. Le jeu fonctionne hors ligne${isNative ? ' : joueurs, scores et photos restent sur ce téléphone' : ' ; dans un navigateur, les données restent dans celui-ci'}.${shopActive() ? ' Les publicités et les achats passent par Google.' : ''}</p>
 </div>`;
 }
 
@@ -489,3 +492,7 @@ export function custom() {
 }
 
 export { WIN_LABEL, esc };
+
+/* ---------- Boutique ---------- */
+
+export const shop = () => shopScreen(topBar);

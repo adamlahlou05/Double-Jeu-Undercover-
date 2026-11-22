@@ -8,6 +8,7 @@ import { leaderboard } from './stats.js';
 import { plural, listNames, clockLabel } from './dom.js';
 import { DB, S, lookOf, nightStats, profileById } from './state.js';
 import { roleBadge, recapPoints, recapRounds, wordPair, catsSheet, cameraDialog, WIN_LABEL } from './views.js';
+import { reserveSheet } from './views-shop.js';
 
 const withRound = (title, g) => `${title}<small>tour ${g.round}</small>`;
 const gameTop = (title, right = '') => `<header class="top"><button class="ibtn" data-act="game-menu" aria-label="Menu de la partie">${icon('pause')}</button><h1 class="title">${title}</h1>${right}</header>`;
@@ -370,6 +371,7 @@ export function modal() {
     case 'clue': return g && g.phase === 'clues' ? { html: clueDialog(g), kind: 'k-center k-top', key: `clue-${m.i}` } : null;
     case 'cats': return { html: catsSheet(), kind: 'k-sheet', key: 'cats' };
     case 'camera': return { html: cameraDialog(m), kind: 'k-center', key: 'camera' };
+    case 'reserve': return { html: reserveSheet(m), kind: 'k-sheet', key: 'reserve' };
     case 'confirm': return { html: confirmDialog(m), kind: 'k-center', key: `confirm-${m.act}-${m.title}` };
     default: return null;
   }

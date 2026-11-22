@@ -973,6 +973,127 @@ async function run(url) {
 
 /** Le pont natif de l'application Android, simulé : mêmes fonctions que la coque Java (window.DJNative). */
 async function nativeBridge(browser, url) {
+  await scenario('boutique (pont simulé) : réserve, pub avec récompense, secours hors ligne, packs, illimité', async () => {
+    check(!(await exists('.reserve')), 'hors application, la boutique ne doit pas apparaître');
+    const main = page;
+    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, locale: 'fr-FR' });
+    page = await ctx.newPage();
+    page.on('pageerror', (e) => errors.push(`erreur JavaScript (boutique) : ${e.message}`));
+    await page.addInitScript(() => {
+      window.DJ_TEST = true;
+      const calls = [];
+      window.__calls = calls;
+      const shop = { owned: [], ad: 'earned', prices: { premium: '4,99 €', pack_soiree: '1,99 €', pack_politique: '1,99 €', pack_foot: '1,99 €' } };
+      window.__shop = shop;
+      const info = () => JSON.stringify({ ads: true, billing: true, owned: shop.owned, prices: shop.prices, privacy: true, test: true });
+      window.DJNative = {
+        read: (k) => localStorage.getItem('native:' + k) || '',
+        readBackup: () => '',
+        write: (k, v) => { localStorage.setItem('native:' + k, v); return true; },
+        isNight: () => false, setBars() {}, keepAwake() {}, vibrate() {}, exportFile() {},
+        shopInfo: info,
+        adsWarmup: () => { calls.push('adsWarmup'); },
+        showRewarded: () => { calls.push('showRewarded'); setTimeout(() => window.DJ.adResult(shop.ad), 80); },
+        buy: (id) => { calls.push('buy:' + id); setTimeout(() => { shop.owned.push(id); window.DJ.shop(info()); }, 80); },
+        restorePurchases: () => { calls.push('restore'); setTimeout(() => window.DJ.shop(info()), 30); },
+        privacyOptions: () => { calls.push('privacy'); },
+      };
+    });
+    const calls = () => page.evaluate(() => window.__calls.slice());
+    const eco = () => page.evaluate(() => JSON.parse(JSON.stringify(window.__dj.DB.meta.eco)));
+    const abandon = async () => {
+      await tap(act('game-menu')); await wait(300);
+      await tap(act('ask-abandon')); await wait(250);
+      await tap(act('do-abandon')); await settle();
+    };
+    const playOne = async () => { await gotoTab('home'); await tap(act('quick-game')); await settle(); };
+    try {
+      await page.goto(url);
+      await wait(800);
+      // premier lancement : des parties offertes, rien de publicitaire
+      check((await text('.reserve b')).trim() === '3', 'la réserve de départ n’est pas affichée');
+      check((await calls()).length === 0, 'la pub est préparée dès le premier lancement');
+      await shot('60-accueil-reserve');
+      await gotoTab('players');
+      for (const [name, c, f] of PEOPLE.slice(0, 3)) await createProfile(name, c, f);
+      await toOptions(3);
+      check((await page.evaluate(() => window.__dj.S.setup.levels.join())) === '1,2', 'le niveau Corsé doit être décoché par défaut');
+      // packs verrouillés dans la liste des thèmes
+      await tap(act('open-cats')); await wait(350);
+      check((await page.locator('#modal .rowbtn.locked').count()) === 3, 'les trois packs ne sont pas montrés verrouillés');
+      check((await page.evaluate(() => window.__dj.S.setup.cats.some((c) => ['soiree', 'politique', 'foot'].includes(c)))) === false, 'un pack non acheté est jouable');
+      await shot('61-themes-packs');
+      await tap(act('close-modal')); await wait(250);
+      await tap(act('start-game')); await settle();
+      check((await game()) && (await eco()).credits === 2 && (await eco()).played === 1, 'la première partie ne consomme pas une partie de la réserve');
+      check(!(await calls()).includes('showRewarded') && !(await calls()).includes('adsWarmup'), 'de la publicité avant ou pendant la première partie');
+      await abandon();
+      await gotoTab('home');
+      check((await calls()).includes('adsWarmup'), 'après la première partie, les pubs ne sont pas préparées');
+      await playOne(); await abandon();
+      await playOne(); await abandon();
+      check((await eco()).credits === 0, 'la réserve ne tombe pas à zéro après trois parties');
+      // réserve vide : la partie ne démarre pas, la feuille propose la pub ou l'illimité
+      await gotoTab('home');
+      await tap(act('quick-game')); await wait(400);
+      check((await exists('.shopsheet')) && (await game()) === null, 'réserve vide : la partie démarre quand même');
+      await shot('62-reserve-vide');
+      // pub quittée avant la fin : rien
+      await page.evaluate(() => { window.__shop.ad = 'closed'; });
+      await tap(act('ad-watch')); await wait(400);
+      check((await text('.shopsheet .err')).includes('interrompue') && (await eco()).credits === 0 && (await game()) === null, 'une pub interrompue donne quand même une récompense');
+      // pub vue en entier : +2, et la partie demandée démarre
+      await page.evaluate(() => { window.__shop.ad = 'earned'; });
+      await tap(act('ad-watch')); await wait(500); await settle();
+      check((await game()) !== null && (await eco()).credits === 1, 'la pub vue en entier ne lance pas la partie avec la bonne réserve');
+      await abandon();
+      await playOne(); await abandon();
+      // aucune pub disponible (hors ligne) : deux parties de secours par jour, pas plus
+      await page.evaluate(() => { window.__shop.ad = 'unavailable'; });
+      for (let k = 0; k < 2; k++) {
+        await gotoTab('home');
+        await tap(act('quick-game')); await wait(350);
+        await tap(act('ad-watch')); await wait(500); await settle();
+        check((await game()) !== null, `partie de secours ${k + 1} refusée alors qu’aucune pub n’est disponible`);
+        await abandon();
+      }
+      await gotoTab('home');
+      await tap(act('quick-game')); await wait(350);
+      await tap(act('ad-watch')); await wait(500);
+      check((await game()) === null && (await text('.shopsheet .err')).includes('Aucune pub'), 'les parties de secours ne sont pas limitées');
+      // achat de l'illimité depuis la feuille : la partie en attente démarre
+      await tap(act('buy', '[data-id="premium"]')); await wait(500); await settle();
+      check((await game()) !== null && (await page.evaluate(() => window.__dj.Shop.isPremium(window.__dj.DB.meta.eco))), 'l’achat de l’illimité ne lance pas la partie');
+      await abandon();
+      await gotoTab('home');
+      check(await exists('.reserve.gold'), 'l’accueil n’indique pas le jeu illimité');
+      const before = (await eco()).credits;
+      await playOne();
+      check((await eco()).credits === before, 'en illimité, une partie consomme encore la réserve');
+      await abandon();
+      // packs ouverts et cochés d'office, boutique à jour
+      await toOptions(3);
+      check((await page.evaluate(() => ['soiree', 'politique', 'foot'].every((c) => window.__dj.S.setup.cats.includes(c)))), 'les packs débloqués ne sont pas cochés d’office');
+      await tap(act('back')); await settle();
+      await tap(act('back')); await settle();
+      await gotoTab('settings');
+      await tap(act('go', '[data-to="shop"]')); await settle();
+      check((await page.locator('.screen:not(.leave) .owned').count()) >= 4, 'la boutique ne montre pas les achats débloqués');
+      await shot('63-boutique');
+      await tap(act('shop-privacy'));
+      await tap(act('shop-restore')); await wait(200);
+      check((await calls()).includes('privacy') && (await calls()).includes('restore'), 'confidentialité ou restauration des achats non transmise');
+      // « Tout effacer » ne rend pas les achats ni la réserve
+      await tap(act('back')); await settle();
+      await tap(act('ask-reset-all')); await wait(300);
+      await tap(act('reset-all-go')); await settle();
+      check((await page.evaluate(() => window.__dj.Shop.isPremium(window.__dj.DB.meta.eco))) && (await db()).profiles.length === 0, '« Tout effacer » efface aussi les achats');
+    } finally {
+      await ctx.close();
+      page = main;
+    }
+  });
+
   await scenario('pont natif Android (simulé) : fichiers, copie de secours, thème, écran allumé, export', async () => {
     const main = page;
     const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, locale: 'fr-FR' });

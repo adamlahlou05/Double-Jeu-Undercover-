@@ -14,6 +14,7 @@ const P = {
   next: '<path d="M9.5 5.5L16 12l-6.5 6.5"/>',
   eye: '<path d="M2.5 12s3.5-6.5 9.5-6.5 9.5 6.5 9.5 6.5-3.5 6.5-9.5 6.5S2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.8"/>',
   trash: '<path d="M5 7h14M9.5 7V5h5v2M7 7l.8 12h8.4L17 7M10 10.5v5M14 10.5v5"/>',
+  crown: '<path d="M4 19h16M5 15.5 3.8 7.5l4.7 3.6L12 5l3.5 6.1 4.7-3.6L19 15.5z"/>',
   edit: '<path d="M5 19l1-4L16.5 4.5l3 3L9 18zM14.5 6.5l3 3"/>',
   camera: '<path d="M4 8h3l1.5-2h7L17 8h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>',
   image: '<rect x="4" y="5" width="16" height="14" rx="2"/><circle cx="9" cy="10" r="1.5"/><path d="M5 17l4.5-4 3.5 3 2.5-2 3.5 3"/>',

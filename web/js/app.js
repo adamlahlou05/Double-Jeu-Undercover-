@@ -9,10 +9,11 @@ import { pickPair, buildPool, CATEGORIES, CUSTOM_CAT } from './words/index.js';
 import { norm } from './text.js';
 import { suggestLook, avatarSprite, faceId } from './avatars.js';
 import * as Cam from './camera.js';
+import * as Shop from './shop.js';
 import { exportPayload, parseImport, DEFAULT_SETTINGS } from './store.js';
 import {
   DB, S, TABS, save, go, back, tab, route, freshGui, profileById, defaultSetup, fitRoles, quickSetup,
-  invalidateStats, activeGame, newId, isDefaultName, nextDefaultName,
+  invalidateStats, activeGame, newId, isDefaultName, nextDefaultName, openCats,
 } from './state.js';
 
 const $stage = document.getElementById('stage');
@@ -23,7 +24,7 @@ const $app = document.getElementById('app');
 const native = window.DJNative || null;
 
 const SCREENS = {
-  home: V.home, players: V.players, profile: V.profile, setup: V.setup, options: V.options, ranking: V.ranking,
+  home: V.home, players: V.players, profile: V.profile, setup: V.setup, options: V.options, ranking: V.ranking, shop: V.shop,
   player: V.player, history: V.history, detail: V.detail, rules: V.rules, settings: V.settings, custom: V.custom, game: G.game,
 };
 
@@ -113,6 +114,7 @@ function render() {
   renderModal();
   syncCamera();
   syncEnv(r);
+  warmAds();
 }
 
 /* ---------- Thème ---------- */
@@ -316,12 +318,19 @@ function confetti(winner) {
 
 /* ---------- Lancement d'une partie ---------- */
 
-function startGame(setup, note) {
+/**
+ * Lance une partie. `free` : la partie ne touche pas à la réserve (nouvelle distribution de la même
+ * partie, ou partie offerte parce qu'aucune pub n'était disponible).
+ */
+function startGame(setup, note, free = false) {
   const players = setup.players.map(profileById).filter(Boolean);
   if (players.length < E.MIN_PLAYERS) { toast(`Il faut au moins ${E.MIN_PLAYERS} joueurs.`); return false; }
   const sel = { cats: setup.cats, levels: setup.levels, custom: DB.meta.custom };
   const picked = pickPair({ ...sel, used: DB.meta.used, recentWords: DB.meta.recent });
   if (!picked) { toast('Aucune paire de mots dans cette sélection.'); return false; }
+  // Réserve vide : on propose une pub (ou l'illimité) avant de distribuer. Rien n'est encore modifié.
+  if (!free && Shop.shopActive() && !Shop.canStart(DB.meta.eco)) { openReserve({ setup, note }); return false; }
+  if (!free && Shop.shopActive()) DB.meta.eco = Shop.spend(DB.meta.eco);
   if (picked.recycled) {
     const keys = new Set(buildPool(sel).map((p) => p.key));
     DB.meta.used = DB.meta.used.filter((k) => !keys.has(k));
@@ -331,7 +340,7 @@ function startGame(setup, note) {
   DB.meta.recent = DB.meta.recent.concat([picked.pair.a, picked.pair.b]).slice(-24);
   DB.meta.setup = {
     players: setup.players.slice(), mode: setup.mode, u: setup.u, w: setup.w, auto: setup.auto,
-    cats: setup.cats.slice(), known: CATEGORIES.map((c) => c.id), levels: setup.levels.slice(), vote: setup.vote, timer: setup.timer, notes: setup.notes,
+    cats: setup.cats.slice(), known: Array.isArray(setup.known) ? setup.known.slice() : openCats(), rev: 3, levels: setup.levels.slice(), vote: setup.vote, timer: setup.timer, notes: setup.notes,
   };
   save('meta');
   stopTimers();
@@ -436,6 +445,76 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 
+/* ---------- Boutique : réserve, pubs avec récompense, achats ---------- */
+
+function readShop(json) {
+  let info = null;
+  try { info = typeof json === 'string' ? JSON.parse(json) : json; } catch (e) { info = null; }
+  if (!info || typeof info !== 'object') return;
+  S.shop = { ads: !!info.ads, billing: !!info.billing, prices: info.prices && typeof info.prices === 'object' ? info.prices : {}, privacy: !!info.privacy, test: !!info.test };
+  const before = DB.meta.eco.owned.join();
+  DB.meta.eco = Shop.withOwned(DB.meta.eco, info.owned);
+  if (DB.meta.eco.owned.join() !== before) {
+    save('meta');
+    // Un pack vient d'être débloqué : il est coché d'office dans les réglages de partie en cours.
+    if (S.setup) {
+      for (const c of openCats()) if (!S.setup.cats.includes(c) && !(S.setup.known || []).includes(c)) S.setup.cats.push(c);
+      S.setup.known = openCats();
+    }
+  }
+}
+
+function openReserve(pending = null) {
+  S.modal = { type: 'reserve', pending, busy: false, msg: '' };
+  render();
+}
+
+/** La coque a fini d'afficher (ou pas) la pub : 'earned' si elle a été vue jusqu'au bout. */
+function adResult(status) {
+  const m = S.modal && S.modal.type === 'reserve' ? S.modal : null;
+  const pending = m ? m.pending : null;
+  if (status === 'earned') {
+    DB.meta.eco = Shop.reward(DB.meta.eco);
+    save('meta');
+    sfx.good();
+    if (m) S.modal = null;
+    if (pending) startGame(pending.setup, pending.note); else toast(`+${Shop.SHOP.REWARD} parties en réserve.`);
+  } else if (status === 'closed') {
+    if (m) { m.busy = false; m.msg = 'Pub interrompue avant la fin : aucune partie gagnée.'; }
+  } else if (pending && Shop.rescuesLeft(DB.meta.eco) > 0) {
+    // Aucune pub disponible (hors ligne, panne) : on ne bloque pas la soirée, dans la limite du jour.
+    DB.meta.eco = Shop.useRescue(DB.meta.eco);
+    save('meta');
+    S.modal = null;
+    startGame(pending.setup, 'Aucune pub disponible : cette partie est offerte.', true);
+  } else if (m) {
+    m.busy = false;
+    m.msg = 'Aucune pub disponible pour l’instant. Vérifie ta connexion, puis réessaie.';
+  }
+  render();
+}
+
+/** Google Play a répondu : achats et prix mis à jour. Si l'illimité vient d'être acheté, la partie en attente démarre. */
+function shopChanged(json) {
+  const was = Shop.isPremium(DB.meta.eco);
+  readShop(json);
+  const m = S.modal && S.modal.type === 'reserve' ? S.modal : null;
+  if (!was && Shop.isPremium(DB.meta.eco)) {
+    sfx.win();
+    toast('Jeu illimité débloqué. Merci !');
+    if (m) { const pending = m.pending; S.modal = null; if (pending) startGame(pending.setup, pending.note); }
+  }
+  render();
+}
+
+/** Les pubs ne sont préparées qu'après la première partie : le premier lancement reste sans rien de publicitaire. */
+function warmAds() {
+  if (S.adsWarm || !Shop.shopActive() || Shop.isPremium(DB.meta.eco) || DB.meta.eco.played < 1) return;
+  if (route().name !== 'home' || S.modal || activeGame()) return;
+  S.adsWarm = true;
+  try { native.adsWarmup(); } catch (e) { /* sans gravité */ }
+}
+
 /* ---------- Profils ---------- */
 
 function saveProfile() {
@@ -490,7 +569,7 @@ function wipeAll() {
   dropGame();
   DB.profiles = [];
   DB.history = [];
-  DB.meta = { v: 1, settings: { ...DEFAULT_SETTINGS }, setup: null, used: [], recent: [], custom: [], rulesSeen: false };
+  DB.meta = { v: 1, settings: { ...DEFAULT_SETTINGS }, setup: null, used: [], recent: [], custom: [], rulesSeen: false, eco: DB.meta.eco };
   save('profiles'); save('history'); save('meta');
   invalidateStats();
   S.setup = null;
@@ -604,12 +683,36 @@ const ACT = {
     const s = S.setup;
     s.cats = s.cats.includes(d.id) ? s.cats.filter((c) => c !== d.id) : s.cats.concat(d.id);
   },
-  'cats-all'() { S.setup.cats = CATEGORIES.map((c) => c.id).concat(DB.meta.custom.length ? [CUSTOM_CAT.id] : []); },
+  'cats-all'() { S.setup.cats = openCats().concat(DB.meta.custom.length ? [CUSTOM_CAT.id] : []); },
   'cats-none'() { S.setup.cats = []; },
   'set-vote'(d) { S.setup.vote = d.id === 'secret' ? 'secret' : 'open'; },
   'set-timer'(d) { S.setup.timer = Number(d.id) || 0; },
   'toggle-notes'() { S.setup.notes = !S.setup.notes; },
   'start-game'() { startGame(S.setup); },
+
+  /* Boutique */
+  'shop-open'() { S.modal = null; if (route().name !== 'shop') go('shop'); },
+  'reserve-open'() { if (Shop.shopActive() && !Shop.isPremium(DB.meta.eco)) openReserve(); return false; },
+  'ad-watch'() {
+    const m = S.modal;
+    if (!m || m.type !== 'reserve' || m.busy || !native) return false;
+    m.busy = true; m.msg = '';
+    render();
+    try { native.showRewarded(); } catch (e) { adResult('unavailable'); }
+    return false;
+  },
+  buy(d) {
+    if (!native || !Shop.PRODUCT_IDS.includes(d.id)) return false;
+    try { native.buy(d.id); } catch (e) { toast('Achat impossible pour l’instant.'); }
+    return false;
+  },
+  'shop-restore'() {
+    if (!native) return false;
+    try { native.restorePurchases(); toast('Vérification de tes achats…'); } catch (e) { toast('Vérification impossible pour l’instant.'); }
+    return true;
+  },
+  'shop-privacy'() { if (native) { try { native.privacyOptions(); } catch (e) { /* sans gravité */ } } return false; },
+
 
   /* Partie : distribution */
   'pick-card'(d) { play((g) => E.pickCard(g, Number(d.i))); openCard(); },
@@ -696,7 +799,7 @@ const ACT = {
   },
   'do-leave'(d) { S.modal = null; play((g) => E.playerLeaves(g, Number(d.i))); },
   'ask-redeal'() { confirm({ title: 'Redistribuer les cartes ?', text: 'La partie repart de zéro avec un nouveau mot.', yes: 'Redistribuer', act: 'do-redeal' }); },
-  'do-redeal'() { S.modal = null; dropGame(); startGame(defaultSetup(), 'Nouvelle distribution, nouveau mot.'); },
+  'do-redeal'() { S.modal = null; dropGame(); startGame(defaultSetup(), 'Nouvelle distribution, nouveau mot.', true); },
   'ask-abandon'() { confirm({ title: 'Abandonner la partie ?', text: 'Elle ne comptera pas dans les scores ni dans l’historique.', yes: 'Abandonner', no: 'Continuer', act: 'do-abandon', danger: true }); },
   'do-abandon'() { S.modal = null; dropGame(); tab('home'); toast('Partie abandonnée.'); },
 
@@ -743,7 +846,7 @@ const ACT = {
     S.modal = null;
     if (!data) return;
     dropGame();
-    DB.meta = data.meta; DB.profiles = data.profiles; DB.history = data.history;
+    DB.meta = { ...data.meta, eco: DB.meta.eco }; DB.profiles = data.profiles; DB.history = data.history;
     save('meta'); save('profiles'); save('history');
     invalidateStats();
     S.setup = null;
@@ -879,6 +982,9 @@ function handleBack() {
 window.DJ = {
   back: handleBack,
   exported(ok) { toast(ok ? 'Sauvegarde enregistrée.' : 'Export annulé.'); },
+  adResult,
+  shop: shopChanged,
+  shopNote(text) { toast(String(text || '')); },
   themeChanged() { applyTheme(); },
 };
 document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') handleBack(); });
@@ -892,6 +998,7 @@ function boot() {
     DB.game = null;
     save('game');
   }
+  if (Shop.shopActive()) { try { readShop(native.shopInfo()); } catch (e) { /* boutique indisponible : le jeu reste jouable */ } }
   // Les dessins des personnages sont déclarés une fois pour toute la page.
   if (!document.getElementById('av-sprite')) document.body.insertAdjacentHTML('afterbegin', avatarSprite());
   applyTheme();
@@ -899,5 +1006,5 @@ function boot() {
   document.documentElement.classList.add('ready');
 }
 
-window.__dj = { S, DB, E, Cam, render };
+window.__dj = { S, DB, E, Cam, Shop, render };
 boot();

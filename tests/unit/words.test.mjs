@@ -9,7 +9,8 @@ test('bibliothèque : volume, niveaux et unicité', () => {
   const keys = new Set();
   for (const c of CATEGORIES) {
     assert.ok(c.name && c.hint, c.id);
-    assert.ok(c.pairs.length >= 80, `${c.id} : ${c.pairs.length} paires`);
+    // Un thème offert compte au moins 80 paires ; un pack à débloquer, au moins 55.
+    assert.ok(c.pairs.length >= (c.pack ? 55 : 80), `${c.id} : ${c.pairs.length} paires`);
     for (const p of c.pairs) {
       assert.ok([1, 2, 3].includes(p.lvl));
       assert.notEqual(norm(p.a), norm(p.b), `${p.a} | ${p.b}`);

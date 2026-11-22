@@ -5,8 +5,9 @@ import { computeStats } from './stats.js';
 import { CATEGORIES, CUSTOM_CAT, buildPool } from './words/index.js';
 import * as E from './engine.js';
 import { norm } from './text.js';
+import { shopActive, ownsPack } from './shop.js';
 
-export const APP_VERSION = '2.1.0';
+export const APP_VERSION = '3.0.0';
 export const TIMER_CHOICES = [0, 60, 120, 180, 300];
 
 export const DB = loadDb();
@@ -35,6 +36,8 @@ export const S = {
   draft: null,
   gui: freshGui(),
   rank: { tab: 'all', sort: 'points' },
+  // Ce que la coque Android sait de la boutique : prix affichés par Google Play, pubs prêtes ou non.
+  shop: { ads: false, billing: false, prices: {}, privacy: false, test: false },
   hero: null,
   pairDraft: { a: '', b: '' },
   saveFailed: false,
@@ -102,6 +105,11 @@ export function invalidateStats() { statsCache = null; nightCache = null; }
 export const activeGame = () => (DB.game && DB.game.phase !== 'end' ? DB.game : null);
 
 const ALL_CATS = CATEGORIES.map((c) => c.id);
+
+/** Un thème de pack n'est jouable que s'il a été débloqué (ou avec le jeu illimité). Hors application : jamais. */
+export const catOpen = (c) => !c.pack || (shopActive() && ownsPack(DB.meta.eco, c.pack));
+/** Identifiants des thèmes jouables sur cet appareil. */
+export const openCats = () => CATEGORIES.filter(catOpen).map((c) => c.id);
 // Thèmes de la version 2.0 : sert à repérer les thèmes ajoutés depuis par une mise à jour.
 const CATS_V20 = ['objets', 'nourriture', 'animaux', 'situations', 'metiers', 'ecole', 'loisirs', 'sport', 'cinema', 'musique',
   'celebrites', 'geo', 'histoire', 'culture', 'sciences', 'tech', 'expressions', 'abstrait', 'humour'];
@@ -110,12 +118,17 @@ const CATS_V20 = ['objets', 'nourriture', 'animaux', 'situations', 'metiers', 'e
 export function defaultSetup() {
   const last = DB.meta.setup || {};
   const players = (Array.isArray(last.players) ? last.players : []).filter((id) => profileById(id)).slice(0, E.MAX_PLAYERS);
-  let cats = Array.isArray(last.cats) ? last.cats.filter((c) => ALL_CATS.includes(c) || c === CUSTOM_CAT.id) : ALL_CATS.slice();
-  // Un thème apparu avec une mise à jour est coché d'office : il ne peut pas avoir été écarté par le joueur.
+  const open = openCats();
+  let cats = Array.isArray(last.cats) ? last.cats.filter((c) => open.includes(c) || c === CUSTOM_CAT.id) : open.slice();
+  // Un thème apparu avec une mise à jour, ou un pack qui vient d'être débloqué, est coché d'office :
+  // il ne peut pas avoir été écarté par le joueur.
   const known = Array.isArray(last.known) ? last.known : CATS_V20;
-  if (Array.isArray(last.cats)) for (const c of ALL_CATS) if (!known.includes(c) && !cats.includes(c)) cats.push(c);
-  if (!cats.length) cats = ALL_CATS.slice();
+  if (Array.isArray(last.cats)) for (const c of open) if (!known.includes(c) && !cats.includes(c)) cats.push(c);
+  if (!cats.length) cats = open.slice();
   let levels = Array.isArray(last.levels) ? last.levels.filter((l) => [1, 2, 3].includes(l)) : [1, 2];
+  // Le niveau « Corsé » est décoché par défaut. Les réglages enregistrés avant la version 3 sont remis
+  // sur ce défaut une fois ; ensuite, le choix du joueur est conservé.
+  if (last.rev !== 3) levels = levels.filter((l) => l !== 3);
   if (!levels.length) levels = [1, 2];
   const s = {
     players,
@@ -123,6 +136,8 @@ export function defaultSetup() {
     u: 1, w: 1,
     auto: last.auto !== false,
     cats, levels,
+    // Thèmes jouables au moment où ce réglage est proposé : un pack débloqué plus tard sera coché d'office.
+    known: open.slice(),
     vote: last.vote === 'secret' ? 'secret' : 'open',
     timer: TIMER_CHOICES.includes(last.timer) ? last.timer : 0,
     notes: !!last.notes,

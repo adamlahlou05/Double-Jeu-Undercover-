@@ -4,6 +4,7 @@ import monde from './monde.js';
 import vie from './vie.js';
 import divertissement from './divertissement.js';
 import esprit from './esprit.js';
+import premium from './premium.js';
 import { norm, pairKey } from '../text.js';
 
 export const LEVELS = [
@@ -13,7 +14,8 @@ export const LEVELS = [
 ];
 
 const ORDER = ['objets', 'nourriture', 'animaux', 'situations', 'metiers', 'ecole', 'loisirs', 'sport', 'cinema', 'musique',
-  'celebrites', 'geo', 'histoire', 'culture', 'sciences', 'elec', 'tech', 'expressions', 'abstrait', 'humour'];
+  'celebrites', 'geo', 'histoire', 'culture', 'sciences', 'elec', 'tech', 'expressions', 'abstrait', 'humour',
+  'soiree', 'politique', 'foot'];
 
 function parse(cat) {
   const out = [];
@@ -30,15 +32,19 @@ function parse(cat) {
   return out;
 }
 
-const RAW = [...nature, ...monde, ...vie, ...divertissement, ...esprit];
+const RAW = [...nature, ...monde, ...vie, ...divertissement, ...esprit, ...premium];
 
 export const CATEGORIES = RAW
-  .map((c) => ({ id: c.id, name: c.name, hint: c.hint, pairs: parse(c) }))
+  // `pack` : identifiant du produit qui débloque le thème (absent pour les thèmes offerts).
+  .map((c) => ({ id: c.id, name: c.name, hint: c.hint, pack: c.pack || null, pairs: parse(c) }))
   .sort((x, y) => ORDER.indexOf(x.id) - ORDER.indexOf(y.id));
 
 export const CUSTOM_CAT = { id: 'perso', name: 'Nos mots', hint: 'Les paires ajoutées par votre groupe' };
 
 export const TOTAL_PAIRS = CATEGORIES.reduce((n, c) => n + c.pairs.length, 0);
+/** Paires des thèmes offerts (hors packs à débloquer). */
+export const FREE_PAIRS = CATEGORIES.filter((c) => !c.pack).reduce((n, c) => n + c.pairs.length, 0);
+export const FREE_CATS = CATEGORIES.filter((c) => !c.pack).length;
 
 export function categoryName(id) {
   if (id === CUSTOM_CAT.id) return CUSTOM_CAT.name;

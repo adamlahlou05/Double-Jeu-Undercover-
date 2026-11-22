@@ -153,7 +153,12 @@ html[data-theme="dark"] .rowbtn.danger b { color: #FF9C8A; }
 .avs.tiny .av + .av { margin-left: -12px; }
 .avs .more { font-style: normal; font-weight: 700; font-size: 13px; color: var(--ink-2); margin-left: 4px; }
 .teamstrip .more, .quick .more { color: var(--on-bg-2); }
-.preview { display: grid; place-items: center; padding: 2px 0 12px; }
+.preview { display: grid; justify-items: center; gap: 12px; padding: 2px 0 14px; }
+/* La photo se prend d'ici : un bouton sur l'avatar, un autre juste dessous. */
+.pv { position: relative; }
+.pvcam { position: absolute; right: -6px; bottom: -2px; width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; background: var(--sun); color: var(--dark); box-shadow: 0 0 0 3px var(--bg), 0 4px 0 rgba(0, 0, 0, .18); transition: transform .12s; }
+.pvcam:active { transform: scale(.92); }
+.pvbtns { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
 
 /* Badges, pastilles, sélecteurs */
 .badge { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 999px; font: 700 13px/1.2 var(--fb); white-space: nowrap; flex: none; }
@@ -512,3 +517,37 @@ html.calm *, html.calm *::before, html.calm *::after { animation-duration: .01ms
 @media (min-width: 541px) {
   #app { box-shadow: 0 0 0 1px rgba(255, 255, 255, .06), 0 30px 80px rgba(0, 0, 0, .4); }
 }
+
+/* ---------- Boutique ---------- */
+.hometop { display: flex; justify-content: flex-end; margin: -4px 0 6px; }
+.reserve { display: inline-flex; align-items: center; gap: 7px; height: 40px; padding: 0 6px 0 12px; border-radius: 20px; background: var(--tint); color: var(--on-bg); font-weight: 600; font-size: 15px; }
+.reserve b { font: 900 19px/1 var(--fd); }
+.reserve i { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--sun); color: var(--dark); font-style: normal; }
+.reserve.empty b { color: var(--sun); }
+.reserve.gold { padding: 0 14px 0 12px; background: var(--sun); color: var(--dark); font-weight: 700; }
+.shopsheet { text-align: center; }
+.shopsheet h2 { margin-top: 6px; }
+.shopsheet .lead { margin: 6px 0 14px; color: var(--ink-2); }
+.shopsheet .btn.block + .btn.block { margin-top: 10px; }
+.shopsheet .link { margin-top: 12px; }
+.shopsheet .err { margin: -4px 0 12px; }
+.shopsheet .dots.wait { margin-right: 8px; }
+.stock { justify-self: center; margin: 0 auto; width: 132px; padding: 12px 0 10px; border-radius: 24px; background: var(--well); display: grid; gap: 2px; }
+.stock b { font: 900 44px/1 var(--fd); }
+.stock span { font-size: 13px; font-weight: 600; color: var(--ink-2); }
+.stock.empty b { color: var(--tomato); }
+.premium { border-radius: 28px; padding: 20px 18px 18px; background: var(--dark); color: #fff; text-align: center; animation: rise .4s var(--ease) both; animation-delay: calc(var(--i, 0) * 50ms); }
+.premium .crown { width: 60px; height: 60px; margin: 0 auto 8px; border-radius: 50%; display: grid; place-items: center; background: var(--sun); color: var(--dark); }
+.premium h2 { font-size: 26px; }
+.premium ul { display: grid; gap: 8px; margin: 14px 0 16px; text-align: left; }
+.premium li { display: flex; align-items: flex-start; gap: 10px; font-weight: 600; line-height: 1.3; }
+.premium li .ic { flex: none; color: var(--sun); margin-top: 1px; }
+.premium .hint.onbg { color: rgba(255, 255, 255, .75); }
+.owned { display: inline-flex; align-items: center; gap: 5px; font-weight: 700; font-size: 14px; color: var(--mint-d, #0E9C68); flex: none; }
+.owned.off { color: var(--ink-3); font-weight: 600; }
+.owned.big { justify-content: center; font-size: 16px; color: var(--sun); }
+.row.pack .grow b { display: block; font-weight: 700; }
+.row.pack .grow span { display: block; font-size: 14px; color: var(--ink-2); line-height: 1.3; }
+.opt-ic.gold { background: var(--sun); color: var(--dark); }
+.rowbtn.locked .box { background: var(--well); color: var(--ink-2); border-color: transparent; }
+.rowbtn.locked em { font-style: normal; font-weight: 700; background: var(--sun); color: var(--dark); border-radius: 10px; padding: 3px 8px; font-size: 13px; }
