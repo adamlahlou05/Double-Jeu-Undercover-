@@ -4,7 +4,7 @@
 # Usage : scripts/emulator-smoke.sh chemin/vers/double-jeu.apk
 set -euo pipefail
 
-APK="${1:?chemin de l'APK manquant}"
+APK="${1:?chemin du fichier APK manquant}"
 PKG="io.github.adamlahlou05.doublejeu"
 OUT="emulator-out"
 mkdir -p "$OUT"
