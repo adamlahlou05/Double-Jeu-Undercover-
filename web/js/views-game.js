@@ -9,6 +9,7 @@ import { plural, listNames, clockLabel } from './dom.js';
 import { DB, S, lookOf, nightStats, profileById } from './state.js';
 import { roleBadge, recapPoints, recapRounds, wordPair, catsSheet, cameraDialog, WIN_LABEL } from './views.js';
 import { reserveSheet, unlockSheet } from './views-shop.js';
+import { explain } from './words/index.js';
 
 const withRound = (title, g) => `${title}<small>tour ${g.round}</small>`;
 const gameTop = (title, right = '') => `<header class="top"><button class="ibtn" data-act="game-menu" aria-label="Menu de la partie">${icon('pause')}</button><h1 class="title">${title}</h1>${right}</header>`;
@@ -40,19 +41,46 @@ function deal(g) {
 </div>`;
 }
 
+/**
+ * Taille du mot sur la carte : selon sa longueur, et selon son plus long morceau, pour qu'aucun mot
+ * ne soit coupé en deux sur un petit écran.
+ */
+export function wordSize(word) {
+  const longest = Math.max(...String(word).split(/[\s-]+/).map((t) => t.length));
+  if (word.length > 40 || longest > 15) return 'xxs';
+  if (word.length > 26 || longest > 12) return 'xs';
+  if (word.length > 16 || longest > 9) return 's';
+  if (word.length > 9 || longest > 7) return 'm';
+  return '';
+}
+
+/**
+ * Explication du mot, sous le mot. Fermée, elle tient en un bouton discret ; les mots de niveau Corsé
+ * l'affichent d'office (réglage). Sans explication (mot simple, paire du groupe), rien ne s'affiche.
+ * `rest` : ce qu'on montre à la place tant que l'explication est fermée.
+ */
+function wordHelp(g, word, rest = '') {
+  const other = word === g.words.civil ? g.words.under : g.words.civil;
+  const text = explain(word, other);
+  if (!text) return rest;
+  const auto = DB.meta.settings.help && g.words.lvl === 3;
+  if (auto || S.gui.help) return `<p class="wordexp">${esc(text)}</p>`;
+  return `${rest}<button class="helpbtn" type="button" data-act="word-help">${icon('info', 18)}C’est quoi ?</button>`;
+}
+
 function cardModal(g) {
   if (g.pendingCard < 0) return '';
   const idx = g.cards[g.pendingCard].by;
   const p = g.players[idx];
   const sec = E.secretOf(g, idx);
   const word = sec.white ? '' : sec.word;
-  const size = word.length > 26 ? 'xs' : word.length > 16 ? 's' : word.length > 9 ? 'm' : '';
+  const size = wordSize(word);
   const front = sec.white
     ? `${roleMark('white', 84)}<b class="word m">Mr. White</b><span>Tu n’as pas de mot. Écoute les indices, bluffe, et devine celui des autres.</span>`
-    : `<small>Ton mot secret</small><b class="word ${size}">${esc(word)}</b><span>Retiens-le et ne le montre à personne.</span>`;
+    : `<small>Ton mot secret</small><b class="word ${size}">${esc(word)}</b>${wordHelp(g, word, '<span>Retiens-le et ne le montre à personne.</span>')}`;
   return `<div class="cardview" role="dialog" aria-label="Carte de ${esc(p.name)}">
   <div class="who">${avatar(lookOf(p), 's44')}<b>${esc(p.name)}</b></div>
-  <div class="flip${S.gui.cardFlipped ? ' on' : ''}"><div class="flip-in">
+  <div class="flip${S.gui.cardFlipped ? ' on' : ''}${front.includes('class="wordexp"') ? ' exp' : ''}"><div class="flip-in">
     <div class="face back pcard">${brandMark(88)}</div>
     <div class="face front pcard${sec.white ? ' is-white' : ''}">${front}</div>
   </div></div>
@@ -341,7 +369,7 @@ function peekSheet(g) {
   const m = S.modal;
   if (m.step === 'show') {
     const sec = E.secretOf(g, m.i);
-    return `<div class="dialog" role="dialog"><span class="over ink">${sec.white ? 'Ton rôle' : 'Ton mot secret'}</span><b class="word peekword">${sec.white ? 'Mr. White' : esc(sec.word)}</b>${sec.white ? '<p class="hint">Tu n’as pas de mot.</p>' : ''}<button class="btn ink block" data-act="close-modal">Cacher</button></div>`;
+    return `<div class="dialog" role="dialog"><span class="over ink">${sec.white ? 'Ton rôle' : 'Ton mot secret'}</span><b class="word peekword ${sec.white ? 'm' : wordSize(sec.word) || 'm'}">${sec.white ? 'Mr. White' : esc(sec.word)}</b>${sec.white ? '<p class="hint">Tu n’as pas de mot.</p>' : wordHelp(g, sec.word)}<button class="btn ink block" data-act="close-modal">Cacher</button></div>`;
   }
   if (m.step === 'gate') {
     return `<div class="dialog" role="dialog">${who(g, m.i, 's96')}<h2>Écran réservé à ${nameOf(g, m.i)}</h2><p class="hint">Les autres détournent les yeux.</p><div class="dlg-btns"><button class="btn well" data-act="close-modal">Annuler</button><button class="btn ink" data-act="peek-show">Afficher</button></div></div>`;

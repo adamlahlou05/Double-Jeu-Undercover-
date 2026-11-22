@@ -1,6 +1,6 @@
 {
   "name": "double-jeu",
-  "version": "3.1.0",
+  "version": "3.2.0",
   "private": true,
   "description": "Double Jeu — jeu de mots et de bluff entre amis, hors ligne",
   "type": "module",

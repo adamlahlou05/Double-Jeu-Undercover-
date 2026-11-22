@@ -32,8 +32,8 @@ android {
         applicationId = "io.github.adamlahlou05.doublejeu"
         minSdk = 26
         targetSdk = 36
-        versionCode = 30100
-        versionName = "3.1.0"
+        versionCode = 30200
+        versionName = "3.2.0"
 
         manifestPlaceholders["admobAppId"] = admobAppId
         buildConfigField("String", "ADMOB_REWARDED_ID", "\"$admobRewardedId\"")
@@ -79,7 +79,8 @@ android {
     }
 }
 
-val copyWebAssets = tasks.register<Copy>("copyWebAssets") {
+// Sync, et non Copy : un fichier retiré de web/ disparaît aussi de l'application.
+val copyWebAssets = tasks.register<Sync>("copyWebAssets") {
     from(rootProject.file("../web"))
     into(layout.buildDirectory.dir("generated/webAssets/www"))
 }

@@ -64,7 +64,7 @@ final class Monetization implements PurchasesUpdatedListener {
     /** Identifiants des produits, à créer à l'identique dans la Play Console. */
     private static final List<String> PRODUCTS =
             Collections.unmodifiableList(Arrays.asList("premium", "pack_quotidien", "pack_culture", "pack_loisirs",
-                    "pack_esprit", "pack_soiree", "pack_coquin", "pack_politique", "pack_foot"));
+                    "pack_esprit", "pack_soiree", "pack_coquin", "pack_politique", "pack_foot", "pack_tech"));
     private static final String PREMIUM = "premium";
 
     private static final String PREFS = "boutique";

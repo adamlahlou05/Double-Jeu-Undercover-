@@ -1,10 +1,7 @@
-// Assemble la bibliothèque de mots et fournit le tirage des paires.
-import nature from './nature.js';
-import monde from './monde.js';
-import vie from './vie.js';
-import divertissement from './divertissement.js';
-import esprit from './esprit.js';
-import premium from './premium.js';
+// Bibliothèque de mots et tirage des paires.
+// Les mots viennent de library.js, fabriqué par scripts/import-words.py à partir du classeur
+// data/double-jeu-mots.xlsx : c'est le classeur qu'on modifie, jamais library.js.
+import LIBRARY from './library.js';
 import { norm, pairKey } from '../text.js';
 
 export const LEVELS = [
@@ -13,59 +10,43 @@ export const LEVELS = [
   { id: 3, name: 'Corsé', hint: 'Subtil, pointu ou tordu' },
 ];
 
-const ORDER = ['objets', 'nourriture', 'animaux', 'situations', 'metiers', 'ecole', 'loisirs', 'sport', 'cinema', 'musique',
-  'celebrites', 'geo', 'histoire', 'culture', 'sciences', 'elec', 'tech', 'expressions', 'abstrait', 'humour',
-  'soiree', 'coquin', 'politique', 'foot'];
-
-/** Pack qui débloque chaque thème de base (les thèmes ajoutés par premium.js portent le leur). */
-const THEME_PACK = {
-  objets: 'pack_quotidien', nourriture: 'pack_quotidien', animaux: 'pack_quotidien', situations: 'pack_quotidien', metiers: 'pack_quotidien',
-  geo: 'pack_culture', histoire: 'pack_culture', culture: 'pack_culture', sciences: 'pack_culture', celebrites: 'pack_culture',
-  cinema: 'pack_loisirs', musique: 'pack_loisirs', sport: 'pack_loisirs', loisirs: 'pack_loisirs', tech: 'pack_loisirs',
-  expressions: 'pack_esprit', abstrait: 'pack_esprit', humour: 'pack_esprit', ecole: 'pack_esprit', elec: 'pack_esprit',
-};
-
-function parse(cat) {
-  const out = [];
-  let lvl = 1;
-  for (const line of cat.w.split('\n')) {
-    const s = line.trim();
-    if (!s) continue;
-    if (s[0] === '#') { lvl = Number(s.slice(1)) || 1; continue; }
-    const i = s.indexOf('|');
-    if (i < 0) continue;
-    const a = s.slice(0, i).trim(), b = s.slice(i + 1).trim();
-    if (a && b) out.push({ a, b, lvl, cat: cat.id, key: pairKey(a, b) });
-  }
-  return out;
-}
-
-const RAW = [...nature, ...monde, ...vie, ...divertissement, ...esprit, ...premium];
-
-export const CATEGORIES = RAW
-  // `pack` : produit qui débloque le thème. `extra` : thème vendu en plus de la bibliothèque de base.
-  .map((c) => ({ id: c.id, name: c.name, hint: c.hint, pack: c.pack || THEME_PACK[c.id] || null, extra: !!c.pack, pairs: parse(c) }))
-  .sort((x, y) => ORDER.indexOf(x.id) - ORDER.indexOf(y.id));
+/**
+ * Thèmes, dans l'ordre d'affichage. `pack` : produit qui débloque le thème. `extra` : thème vendu seul,
+ * fermé dans la version navigateur. Une paire : { a, b, lvl, cat, key, free, ea, eb } où `free` marque
+ * la sélection découverte et `ea` / `eb` sont les explications des deux mots (chaînes vides s'il n'y en a pas).
+ */
+export const CATEGORIES = LIBRARY.map((c) => ({
+  id: c.id, name: c.name, hint: c.hint, pack: c.pack, extra: !!c.extra,
+  pairs: c.pairs.map(([lvl, free, a, b, ea = '', eb = '']) => ({ a, b, lvl, cat: c.id, key: pairKey(a, b), free: !!free, ea, eb })),
+}));
 
 export const CUSTOM_CAT = { id: 'perso', name: 'Nos mots', hint: 'Les paires ajoutées par votre groupe' };
 
 export const TOTAL_PAIRS = CATEGORIES.reduce((n, c) => n + c.pairs.length, 0);
 
 /**
- * Sélection découverte, offerte à tous : des paires faciles prises à tour de rôle dans chaque thème
- * de base, soit un mélange de 150 paires (300 mots) simples dans tous les domaines. Pour choisir ses
- * thèmes et monter en difficulté, il faut débloquer des thèmes.
+ * Sélection découverte, offerte à tous : les paires marquées « Offert » dans le classeur, des mots
+ * faciles pris dans chaque thème de base. Pour choisir ses thèmes et monter en difficulté, il faut
+ * débloquer des thèmes.
  */
-export const DISCOVERY_SIZE = 150;
 export const DISCOVERY_CAT = { id: 'decouverte', name: 'Sélection découverte', hint: 'Un mélange de mots simples, dans tous les domaines' };
-export const DISCOVERY_PAIRS = (() => {
-  const easy = CATEGORIES.filter((c) => !c.extra).map((c) => c.pairs.filter((p) => p.lvl === 1));
-  const out = [];
-  for (let rank = 0; out.length < DISCOVERY_SIZE && easy.some((l) => l.length > rank); rank++) {
-    for (const l of easy) if (l.length > rank && out.length < DISCOVERY_SIZE) out.push(l[rank]);
-  }
-  return out;
-})();
+export const DISCOVERY_PAIRS = CATEGORIES.flatMap((c) => c.pairs.filter((p) => p.free));
+
+const BY_KEY = new Map(CATEGORIES.flatMap((c) => c.pairs.map((p) => [p.key, p])));
+
+/**
+ * Explication d'un mot de la bibliothèque, en deux phrases au plus, ou '' s'il n'y en a pas
+ * (mot non expliqué, paire ajoutée par le groupe). `other` est l'autre mot de la paire en jeu.
+ */
+export function explain(word, other) {
+  const p = BY_KEY.get(pairKey(word, other));
+  if (!p) return '';
+  const w = norm(word);
+  return w === norm(p.a) ? p.ea : w === norm(p.b) ? p.eb : '';
+}
+
+/** Niveau d'une paire de la bibliothèque (0 si elle n'en fait pas partie). */
+export const pairLevel = (a, b) => (BY_KEY.get(pairKey(a, b)) || { lvl: 0 }).lvl;
 
 export function categoryName(id) {
   if (id === CUSTOM_CAT.id) return CUSTOM_CAT.name;

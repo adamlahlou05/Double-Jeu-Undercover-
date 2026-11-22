@@ -368,9 +368,10 @@ form.inline .btn { flex: none; }
 .pcard.back::before, .pcard.front::before { content: ""; position: absolute; top: 12px; bottom: 12px; left: 12px; right: 12px; border-radius: 15px; border: 2px solid rgba(21, 22, 59, .12); pointer-events: none; }
 .pcard small { font: 700 15px var(--fb); color: #55577D; }
 .pcard span { font-size: 15px; color: #55577D; line-height: 1.35; max-width: 22ch; }
-.word { display: block; font: 900 44px/1.02 var(--fd); letter-spacing: -.02em; overflow-wrap: anywhere; max-width: 100%; }
-.word.m { font-size: 34px; } .word.s { font-size: 27px; } .word.xs { font-size: 22px; line-height: 1.12; }
-.peekword { font-size: 36px; margin: 6px 0 14px; color: var(--ink); }
+.word { display: block; font: 900 min(44px, 11vw)/1.02 var(--fd); letter-spacing: -.02em; overflow-wrap: anywhere; max-width: 100%; }
+.word.m { font-size: min(34px, 8.6vw); } .word.s { font-size: min(27px, 6.9vw); } .word.xs { font-size: min(22px, 5.8vw); line-height: 1.12; }
+.word.xxs { font-size: min(18px, 5vw); line-height: 1.18; letter-spacing: -.01em; }
+.peekword { margin: 6px 0 14px; color: var(--ink); }
 
 /* Tour de parole : l'ordre complet, lisible à bout de bras. */
 .order { display: grid; gap: 8px; margin-top: 4px; }
@@ -572,3 +573,18 @@ html[data-theme="dark"] .ibtn.del, html[data-theme="dark"] .btn.del { color: #FF
 .freelist li svg { flex: none; margin-top: 1px; color: var(--ink); }
 .freelist b { color: var(--ink); }
 .hint.early { margin: 4px 0 10px; text-align: center; }
+/* Explication d'un mot */
+.helpbtn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 40px; padding: 6px 14px; border-radius: 999px; background: rgba(21, 22, 59, .09); color: var(--dark); font: 700 14px/1 var(--fb); }
+.helpbtn:active { transform: scale(.96); }
+.helpbtn.onbg { background: var(--tint); color: var(--on-bg); margin: 0 auto 12px; display: flex; width: fit-content; }
+.wordexp { margin: 0; font: 500 14px/1.38 var(--fb); color: #3C3E66; max-width: 34ch; }
+.flip.exp { width: min(84vw, 320px); }
+.flip.exp .pcard { padding: 18px 16px; gap: 8px; }
+.dialog .helpbtn { background: var(--well); color: var(--ink); margin: 0 auto 14px; display: flex; width: fit-content; }
+.dialog .wordexp { color: var(--ink-2); margin: 0 auto 14px; text-align: center; }
+.wordsexp { margin-bottom: 12px; }
+.wordsexp p { margin: 0 0 10px; font-size: 14px; line-height: 1.4; color: var(--ink-2); }
+.wordsexp p b { display: block; color: var(--ink); font-size: 15px; }
+.wordsexp .link { padding: 0; min-height: 32px; font-size: 14px; }
+.wcard b.long { font-size: 17px; line-height: 1.18; }
+.word, .wcard b { hyphens: manual; }

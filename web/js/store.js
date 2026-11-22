@@ -47,7 +47,7 @@ function readJson(key) {
   return v;
 }
 
-export const DEFAULT_SETTINGS = { theme: 'auto', sound: true, haptics: true, motion: true };
+export const DEFAULT_SETTINGS = { theme: 'auto', sound: true, haptics: true, motion: true, help: true };
 
 const str = (v, max) => (typeof v === 'string' ? v.slice(0, max) : '');
 const arr = (v) => (Array.isArray(v) ? v : []);
@@ -72,6 +72,8 @@ function cleanMeta(m) {
       sound: s.sound !== false,
       haptics: s.haptics !== false,
       motion: s.motion !== false,
+      // Explication affichée d'office sous les mots de niveau Corsé.
+      help: s.help !== false,
     },
     setup: m.setup && typeof m.setup === 'object' ? m.setup : null,
     used: arr(m.used).filter((k) => typeof k === 'string').slice(-6000),

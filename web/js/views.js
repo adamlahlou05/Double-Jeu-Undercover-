@@ -4,7 +4,7 @@
 import { escapeHtml as esc } from './text.js';
 import { icon, roleMark, brandMark, logoMark } from './icons.js';
 import { avatar, COLORS, FACES, faceId } from './avatars.js';
-import { CATEGORIES, CUSTOM_CAT, DISCOVERY_CAT, DISCOVERY_PAIRS, LEVELS, TOTAL_PAIRS, categoryName } from './words/index.js';
+import { CATEGORIES, CUSTOM_CAT, DISCOVERY_CAT, DISCOVERY_PAIRS, LEVELS, TOTAL_PAIRS, categoryName, explain } from './words/index.js';
 import { shopActive, isPremium, trialEnd } from './shop.js';
 import { reserveChip, shop as shopScreen } from './views-shop.js';
 import * as E from './engine.js';
@@ -392,7 +392,16 @@ export function recapRounds(h) {
 }
 
 export function wordPair(h) {
-  return `<div class="wordpair${h.u ? '' : ' one'}"><div class="wcard civil"><small>Mot des Civils</small><b>${esc(h.civil)}</b></div>${h.u ? `<div class="wcard under"><small>Mot de l’Undercover</small><b>${esc(h.under)}</b></div>` : ''}</div>`;
+  // Un mot long ou fait d'un long morceau est écrit plus petit, pour ne pas être coupé en deux.
+  const long = (w) => (w.length > 18 || Math.max(...w.split(/[\s-]+/).map((x) => x.length)) > 8 ? ' class="long"' : '');
+  // Explications des deux mots, repliées sous un bouton : en fin de partie, plus rien n'est secret.
+  const shown = [[h.civil, h.under, 'civil'], ...(h.u ? [[h.under, h.civil, 'under']] : [])]
+    .map(([w, other, role]) => [w, explain(w, other), role]).filter(([, text]) => text);
+  const help = !shown.length ? ''
+    : S.gui.help
+      ? `<div class="panel wordsexp">${shown.map(([w, text]) => `<p><b>${esc(w)}</b>${esc(text)}</p>`).join('')}<button class="link" type="button" data-act="word-help">Masquer</button></div>`
+      : `<button class="helpbtn onbg" type="button" data-act="word-help">${icon('info', 18)}Que ${shown.length > 1 ? 'veulent dire ces mots' : 'veut dire ce mot'} ?</button>`;
+  return `<div class="wordpair${h.u ? '' : ' one'}"><div class="wcard civil"><small>Mot des Civils</small><b${long(h.civil)}>${esc(h.civil)}</b></div>${h.u ? `<div class="wcard under"><small>Mot de l’Undercover</small><b${long(h.under)}>${esc(h.under)}</b></div>` : ''}</div>${help}`;
 }
 
 export function detail(params) {
@@ -478,6 +487,7 @@ export function settings() {
     ${switchRow('toggle-sound', 'Sons', 'Petits effets à la révélation et à la victoire.', s.sound, 'sound')}
     ${switchRow('toggle-haptics', 'Vibrations', 'Un retour discret sur les actions importantes.', s.haptics, 'vibrate')}
     ${switchRow('toggle-motion', 'Animations', 'À couper pour une interface plus calme.', s.motion, 'sparkle')}
+    ${switchRow('toggle-help', 'Explication des mots corsés', 'Affichée d’office sous le mot. Sinon, un bouton « C’est quoi ? » l’ouvre.', s.help, 'info')}
   </div>
   <h2 class="sect">Mots</h2>
   <div class="panel list">

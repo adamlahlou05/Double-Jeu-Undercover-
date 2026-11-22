@@ -13,12 +13,14 @@ Depuis la version 3, l’application est prévue pour le Play Store :
 - **Parties en réserve.** 3 parties offertes à l’installation (la première se joue donc sans rien de
   publicitaire), puis une pub vidéo regardée jusqu’au bout redonne 2 parties. Sans pub disponible
   (hors ligne), 2 parties par jour restent offertes.
-- **Sélection découverte offerte** : 150 paires faciles (300 mots) piochées dans tous les thèmes de base.
-- **Thèmes à débloquer.** Les 24 thèmes sont visibles, verrouillés. On les ouvre en achetant un pack, ou
+- **Sélection découverte offerte** : 164 paires faciles piochées dans tous les thèmes de base.
+- **Thèmes à débloquer.** Les 26 thèmes sont visibles, verrouillés. On les ouvre en achetant un pack, ou
   l’illimité, ou en regardant une pub pour essayer un thème pendant 12 h.
 - **Double Jeu illimité** : un achat unique qui retire les pubs et ouvre tous les thèmes et niveaux.
-- **Huit packs** vendus à l’unité : Quotidien, Culture, Écrans & loisirs, Esprit, Soirée, Coquin,
-  Politique & société, Foot.
+- **Neuf packs** vendus à l’unité : Quotidien, Culture, Écrans & loisirs, Esprit, Soirée, Coquin,
+  Politique & société, Foot, Tech & Indus.
+- **Explications des mots** : un bouton « C’est quoi ? » sous le mot ouvre deux phrases d’explication ;
+  elles s’affichent d’office pour les mots corsés.
 
 Les pubs (Google AdMob, avec recueil du consentement) et les achats (Google Play) sont les seuls usages
 d’Internet. L’**appareil photo** n’est demandé que pour prendre une photo de profil, qui reste sur le
@@ -32,9 +34,9 @@ Pour publier : **[GUIDE-PUBLICATION.md](GUIDE-PUBLICATION.md)**. Textes et visue
 - **Trois modes** : Classique, Éclair (un seul vote) et Mystère (nombre d’infiltrés secret).
 - **Deux façons de voter** : à main levée, ou en secret sur le téléphone avec dépouillement automatique.
   Égalité : départage entre ex æquo, puis tirage au sort.
-- **2 487 paires de mots** dans 24 thèmes et 3 niveaux (« Corsé » décoché par défaut), dont 150 offertes,
+- **2 596 paires de mots** dans 26 thèmes et 3 niveaux (« Corsé » décoché par défaut), dont 164 offertes,
   sans répétition tant que la sélection n’est pas épuisée, plus vos propres paires (« Nos mots »).
-  Dans un navigateur (sans boutique), les 20 thèmes de base sont ouverts. Un thème « Électricité & électronique » de 100 paires, du disjoncteur
+  Dans un navigateur (sans boutique), les 21 thèmes de base sont ouverts. Un thème « Électricité & électronique » de 100 paires, du disjoncteur
   au régulateur PID.
 - **Tour de parole sur un seul écran** : l’ordre complet du tour (Mr. White ne parle jamais en premier)
   et un bouton « Passer au vote ». Rien à valider joueur par joueur.
@@ -97,10 +99,19 @@ cd android
 
 L’APK se trouve ensuite dans `android/app/build/outputs/apk/`.
 
-### Ajouter des mots
+### Ajouter ou corriger des mots
 
-Dans `web/js/words/`, une ligne par paire, `Mot A|Mot B`, sous le marqueur de niveau `#1`, `#2` ou `#3`.
-`npm run check:words` refuse les doublons et les mots trop longs (40 caractères).
+Les mots vivent dans le classeur `data/double-jeu-mots.xlsx`, feuille « Mots » : une ligne par paire, avec
+le pack, le thème, le niveau, les deux mots, leurs explications (facultatives) et la colonne « Offert ».
+
+```bash
+python3 scripts/import-words.py   # classeur → web/js/words/library.js (dépendance : openpyxl)
+npm run check:words               # doublons, explications qui donnent l'autre mot, longueurs
+npm test
+```
+
+`library.js` est un fichier généré : on ne le modifie pas à la main. Un nouveau thème se déclare dans
+`scripts/import-words.py` (identifiant, description) et dans `PACKS` (`web/js/shop.js`).
 
 ## Signature
 

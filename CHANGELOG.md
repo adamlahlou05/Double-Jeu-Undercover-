@@ -1,5 +1,27 @@
 # Journal des versions
 
+## 3.2.0
+
+### Explications des mots
+
+- **Un bouton « C’est quoi ? » sous le mot**, sur la carte et dans « Revoir mon mot » : il ouvre une explication
+  de deux phrases au plus. Pour les mots de niveau Corsé, elle s’affiche d’office (réglage « Explication des
+  mots corsés »). Un mot sans explication n’affiche rien.
+- **En fin de partie**, « Que veulent dire ces mots ? » explique les deux mots.
+- 559 paires expliquées (1 118 mots) : Coquin, Soirée, Foot, Politique & société, Stars & personnages, Marques
+  & logos, Red flags & débats en entier. Une explication ne cite jamais l’autre mot de la paire.
+- Aucun mot n’est plus coupé en deux sur les petits écrans.
+
+### Mots
+
+- La base de mots vient maintenant d’un classeur, `data/double-jeu-mots.xlsx` : `scripts/import-words.py` en
+  fabrique `web/js/words/library.js`. 2 596 paires dans 26 thèmes.
+- Deux nouveaux thèmes : **Marques & logos** (Pack Quotidien) et **Red flags & débats** (Pack Esprit).
+- Thèmes Coquin, Soirée, Foot, Politique & société et Stars & personnages refondus ; doublons entre thèmes
+  supprimés, paires d’opposés ou de synonymes remplacées.
+- Le thème Électricité & électronique quitte le Pack Esprit et devient le **Pack Tech & Indus** (77 paires).
+- La sélection découverte suit la colonne « Offert » du classeur : 164 paires.
+
 ## 3.1.0
 
 ### Modèle économique

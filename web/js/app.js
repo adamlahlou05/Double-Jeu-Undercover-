@@ -380,6 +380,7 @@ function openCard() {
   S.modal = { type: 'card' };
   gui.cardFlipped = false;
   gui.cardReady = false;
+  gui.help = false;
   buzz(15);
   raf2(() => {
     gui.cardFlipped = true;
@@ -595,7 +596,7 @@ function wipeAll() {
 const ACT = {
   back() { S.modal = null; back(); },
   tab(d) { S.modal = null; tab(d.to); },
-  go(d) { go(d.to, d.id ? { id: d.id } : {}); },
+  go(d) { S.gui.help = false; go(d.to, d.id ? { id: d.id } : {}); },
   'close-modal'() { S.modal = null; },
 
   /* Accueil */
@@ -819,7 +820,7 @@ const ACT = {
   'menu-rules'() { S.modal = null; go('rules'); },
   'menu-home'() { S.modal = null; tab('home'); },
   peek() { S.modal = { type: 'peek', step: 'pick' }; },
-  'peek-pick'(d) { S.modal = { type: 'peek', step: 'gate', i: Number(d.i) }; },
+  'peek-pick'(d) { S.gui.help = false; S.modal = { type: 'peek', step: 'gate', i: Number(d.i) }; },
   'peek-show'() { if (S.modal && S.modal.type === 'peek') S.modal = { ...S.modal, step: 'show' }; },
   'ask-leave'() { S.modal = { type: 'leave' }; },
   'leave-pick'(d) {
@@ -862,6 +863,9 @@ const ACT = {
   'toggle-sound'() { const s = DB.meta.settings; s.sound = !s.sound; save('meta'); applyTheme(); if (s.sound) sfx.good(); },
   'toggle-haptics'() { const s = DB.meta.settings; s.haptics = !s.haptics; save('meta'); applyTheme(); if (s.haptics) buzz(30); },
   'toggle-motion'() { const s = DB.meta.settings; s.motion = !s.motion; save('meta'); applyTheme(); },
+  'toggle-help'() { const s = DB.meta.settings; s.help = !s.help; save('meta'); },
+  // Explication du mot : dépliée ou repliée (carte, « revoir son mot », mots de fin de partie).
+  'word-help'() { S.gui.help = !S.gui.help; },
   'ask-reset-used'() { confirm({ title: 'Rejouer tous les mots ?', text: 'Les paires déjà sorties pourront revenir dans les prochaines parties.', yes: 'Remettre à zéro', act: 'reset-used-go' }); },
   'reset-used-go'() { DB.meta.used = []; DB.meta.recent = []; save('meta'); S.modal = null; toast('Tous les mots peuvent ressortir.'); },
   'export-data'() { exportData(); },

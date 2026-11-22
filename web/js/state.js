@@ -7,7 +7,7 @@ import * as E from './engine.js';
 import { norm } from './text.js';
 import { shopActive, themeOpen } from './shop.js';
 
-export const APP_VERSION = '3.1.0';
+export const APP_VERSION = '3.2.0';
 export const TIMER_CHOICES = [0, 60, 120, 180, 300];
 
 export const DB = loadDb();
@@ -15,6 +15,8 @@ export const DB = loadDb();
 export function freshGui() {
   return {
     cardFlipped: false, cardReady: false,
+    // Explication du mot dépliée (carte, « revoir son mot », fin de partie).
+    help: false,
     gate: true,
     tieMode: false, tieSel: [],
     revealShown: false,

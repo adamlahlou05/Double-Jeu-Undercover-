@@ -1,6 +1,7 @@
 // Économie du jeu : parties en réserve, pubs avec récompense, thèmes à débloquer, achats.
 //
-// Ce qui est offert à tous : une « sélection découverte » de 150 paires faciles (300 mots), et des parties en
+// Ce qui est offert à tous : une « sélection découverte » de paires faciles (marquées « Offert » dans le
+// classeur des mots), et des parties en
 // réserve (3 au départ, 2 de plus par pub regardée jusqu'au bout).
 // Ce qui se débloque : les thèmes (tous visibles, verrouillés), pour choisir ses sujets et les niveaux
 // Moyen et Corsé. Trois façons : acheter le pack du thème, acheter « Double Jeu illimité » (tout, sans
@@ -20,14 +21,15 @@ export const SHOP = {
 
 /** Packs vendus à l'unité. `cats` : thèmes de la bibliothèque que le pack débloque. */
 export const PACKS = [
-  { id: 'pack_quotidien', name: 'Pack Quotidien', pitch: 'Objets, cuisine, animaux, situations, métiers.', cats: ['objets', 'nourriture', 'animaux', 'situations', 'metiers'] },
+  { id: 'pack_quotidien', name: 'Pack Quotidien', pitch: 'Objets, cuisine, animaux, situations, métiers, marques.', cats: ['objets', 'nourriture', 'animaux', 'situations', 'metiers', 'marques'] },
   { id: 'pack_culture', name: 'Pack Culture', pitch: 'Géographie, histoire, culture, sciences, célébrités.', cats: ['geo', 'histoire', 'culture', 'sciences', 'celebrites'] },
   { id: 'pack_loisirs', name: 'Pack Écrans & loisirs', pitch: 'Cinéma, musique, sport, loisirs, tech.', cats: ['cinema', 'musique', 'sport', 'loisirs', 'tech'] },
-  { id: 'pack_esprit', name: 'Pack Esprit', pitch: 'Expressions, idées, humour, école & boulot, électricité.', cats: ['expressions', 'abstrait', 'humour', 'ecole', 'elec'] },
+  { id: 'pack_esprit', name: 'Pack Esprit', pitch: 'Expressions, idées, humour, école & boulot, red flags.', cats: ['expressions', 'abstrait', 'humour', 'ecole', 'redflags'] },
   { id: 'pack_soiree', name: 'Pack Soirée', pitch: 'Apéro, bar, boîte et lendemains difficiles.', cats: ['soiree'] },
-  { id: 'pack_coquin', name: 'Pack Coquin', pitch: 'Séduction, flirt et sous-entendus. Pour adultes.', cats: ['coquin'] },
+  { id: 'pack_coquin', name: 'Pack Coquin', pitch: 'Séduction, désir et jeux à deux. Pour adultes.', cats: ['coquin'] },
   { id: 'pack_politique', name: 'Pack Politique & société', pitch: 'Élus, institutions et débats de comptoir.', cats: ['politique'] },
   { id: 'pack_foot', name: 'Pack Foot', pitch: 'Clubs, légendes et mauvaise foi.', cats: ['foot'] },
+  { id: 'pack_tech', name: 'Pack Tech & Indus', pitch: 'Électricité, électronique, automatisme. Pour initiés.', cats: ['elec'] },
 ];
 
 export const PRODUCT_IDS = [SHOP.PREMIUM, ...PACKS.map((p) => p.id)];

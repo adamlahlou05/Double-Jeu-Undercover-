@@ -1001,7 +1001,8 @@ async function run(url) {
     await tap(act('new-game'));
     await settle();
     const cats = await page.evaluate(() => window.__dj.S.setup.cats.slice());
-    check(cats.includes('elec') && cats.length === 20, `le nouveau thème n’est pas coché d’office (${cats.length} thèmes)`);
+    // Les thèmes de base apparus depuis sont cochés d'office ; un thème vendu seul (fermé ici) ne l'est pas.
+    check(cats.includes('marques') && cats.includes('redflags') && !cats.includes('elec') && cats.length === 21, `les nouveaux thèmes ne sont pas cochés d’office (${cats.length} thèmes)`);
     await tap(act('back'));
     await settle();
   });
@@ -1037,6 +1038,125 @@ async function run(url) {
 
 /** Le pont natif de l'application Android, simulé : mêmes fonctions que la coque Java (window.DJNative). */
 async function nativeBridge(browser, url) {
+  await scenario('explications des mots : bouton sous le mot, affichage d’office en Corsé, fin de partie', async () => {
+    if (!page.url().startsWith(url)) { await page.goto(url); await wait(500); }
+    await page.setViewportSize({ width: 320, height: 640 });
+    const profiles = PEOPLE.slice(0, 4).map(([name], i) => ({ id: 'x' + i, name, color: ['tomate', 'soleil', 'menthe', 'ciel'][i], face: 'renard', photo: '', createdAt: 1 }));
+    const start = async (cats, levels, help) => {
+      await fresh({ profiles, meta: { v: 1, settings: { motion: false, help }, rulesSeen: true, setup: { players: profiles.map((p) => p.id), cats, levels, mode: 'classic', u: 1, w: 1, auto: false, rev: 3 } } });
+      await tap(act('quick-game'));
+      await settle();
+    };
+    const openCard = async (k) => {
+      await page.locator('.screen:not(.leave) .dcard:not(.taken)').nth(0).click();
+      await page.locator('#modal .flip.on').waitFor({ timeout: 3000 });
+      await page.locator('#modal [data-act="confirm-card"]:not([disabled])').waitFor({ timeout: 3000 });
+      const g = await game();
+      return { g, role: g.players[k].role };
+    };
+    const fits = () => page.evaluate(() => { const c = document.querySelector('#modal .pcard.front'); return c.scrollHeight <= c.clientHeight + 1 && c.scrollWidth <= c.clientWidth + 1; });
+    const lib = () => page.evaluate(async () => { const m = await import('/js/words/index.js'); const w = window.__dj.DB.game.words; return { civil: m.explain(w.civil, w.under), under: m.explain(w.under, w.civil) }; });
+
+    // 1. Thème entièrement expliqué, niveau Corsé, réglage par défaut : l'explication est sous le mot, sans rien toucher.
+    await start(['redflags'], [3], true);
+    let seenAuto = 0;
+    for (let k = 0; k < 4; k++) {
+      const { g, role } = await openCard(k);
+      const ex = await lib();
+      if (role === 'white') {
+        check(!(await exists('.wordexp')) && !(await exists('.helpbtn')), 'Mr. White ne doit avoir ni explication ni bouton d’aide');
+      } else {
+        const want = role === 'civil' ? ex.civil : ex.under;
+        const got = (await text('.pcard.front .wordexp')).replace(/\s+/g, ' ').trim();
+        check(want.length > 40 && got.replace(/[’']/g, "'").slice(0, 30) === want.replace(/[’']/g, "'").slice(0, 30), `mot Corsé : l’explication affichée n’est pas celle du mot (${got.slice(0, 40)})`);
+        check(!(await exists('.pcard.front .helpbtn')), 'mot Corsé : un bouton reste alors que l’explication est affichée d’office');
+        check(await fits(), `l’explication déborde de la carte sur un petit écran (${g.words.civil} / ${g.words.under})`);
+        if (!seenAuto++) await shot('70-carte-explication-corse');
+      }
+      await tap(act('confirm-card'));
+      await settle();
+    }
+
+    // 2. Niveau Moyen : un bouton discret, l'explication ne s'ouvre qu'à la demande, et se referme pour le joueur suivant.
+    await start(['coquin'], [2], true);
+    let opened = 0;
+    for (let k = 0; k < 4; k++) {
+      const { g, role } = await openCard(k);
+      if (role !== 'white') {
+        check((await exists('.pcard.front .helpbtn')) && !(await exists('.wordexp')), 'mot Moyen : l’explication doit rester fermée derrière un bouton');
+        if (!opened) await shot('71-carte-bouton-aide');
+        if (opened < 2) {
+          await page.locator('#modal .pcard.front .helpbtn').click();
+          await wait(250);
+          const other = role === 'civil' ? g.words.under : g.words.civil;
+          const got = await text('.pcard.front .wordexp');
+          check(got.length > 40 && !got.toLowerCase().includes(other.toLowerCase()), 'l’explication ouverte est vide ou donne l’autre mot');
+          check(await fits(), `l’explication ouverte déborde de la carte (${g.words.civil} / ${g.words.under})`);
+          if (!opened) await shot('72-carte-explication-ouverte');
+          opened++;
+        }
+      }
+      await tap(act('confirm-card'));
+      await settle();
+    }
+    check(opened === 2, 'le bouton d’aide n’a pas pu être essayé sur deux cartes');
+    // « Revoir mon mot » propose la même aide
+    let g = await game();
+    const civil = g.players.findIndex((p) => p.role === 'civil');
+    await tap(act('peek')); await wait(300);
+    await tap(act('peek-pick', `[data-i="${civil}"]`)); await wait(250);
+    await tap(act('peek-show')); await wait(250);
+    check(await exists('.dialog .helpbtn'), '« Revoir mon mot » ne propose pas l’explication');
+    await page.locator('#modal .dialog .helpbtn').click(); await wait(250);
+    check((await text('.dialog .wordexp')).length > 40, '« Revoir mon mot » n’affiche pas l’explication');
+    await shot('73-revoir-mot-explication');
+    await tap(act('close-modal')); await wait(250);
+    // réglage coupé : même en Corsé, l'explication reste derrière le bouton
+    await start(['foot'], [3], false);
+    for (let k = 0; k < 4; k++) {
+      const { role } = await openCard(k);
+      if (role !== 'white') check((await exists('.pcard.front .helpbtn')) && !(await exists('.wordexp')), 'réglage coupé : l’explication d’un mot Corsé s’affiche quand même');
+      await tap(act('confirm-card'));
+      await settle();
+    }
+
+    // 3. Mot sans explication : aucun bouton, la carte reste comme avant.
+    await start(['animaux'], [1], true);
+    const ex = await lib();
+    for (let k = 0; k < 4; k++) {
+      const { role } = await openCard(k);
+      const mine = role === 'civil' ? ex.civil : ex.under;
+      if (role !== 'white' && !mine) check(!(await exists('.helpbtn')) && !(await exists('.wordexp')), 'un mot sans explication affiche un bouton d’aide');
+      await tap(act('confirm-card'));
+      await settle();
+    }
+
+    // 4. Fin de partie : les deux mots s'expliquent à la demande.
+    await start(['celebrites'], [1, 2, 3], true);
+    for (let k = 0; k < 4; k++) { await openCard(k); await tap(act('confirm-card')); await settle(); }
+    await page.evaluate(() => {
+      const d = window.__dj;
+      let g2 = d.DB.game;
+      for (let guard = 0; guard < 12 && g2.phase !== 'end'; guard++) {
+        if (g2.phase === 'clues') g2 = d.E.openVote(g2);
+        if (g2.phase === 'vote') { const alive = d.E.aliveIdx(g2); const bad = alive.find((i) => g2.players[i].role !== 'civil'); g2 = d.E.eliminateByShow(g2, bad === undefined ? alive[0] : bad); }
+        if (d.E.awaitingGuess(g2)) g2 = d.E.skipGuess(g2);
+        if (g2.phase === 'reveal') g2 = d.E.continueAfterReveal(g2);
+      }
+      d.DB.game = g2; d.S.gui.revealShown = true; d.render();
+    });
+    await settle();
+    g = await game();
+    check(g && g.phase === 'end', `la partie d’essai n’est pas terminée (${g && g.phase})`);
+    check((await exists('.helpbtn.onbg')) && !(await exists('.wordsexp')), 'fin de partie : le bouton « Que veulent dire ces mots ? » manque');
+    await tap('.helpbtn.onbg'); await wait(250);
+    check((await page.locator('.screen:not(.leave) .wordsexp p').count()) === 2, 'fin de partie : les deux explications ne s’affichent pas');
+    await shot('74-fin-explications');
+    await tap('.wordsexp .link'); await wait(200);
+    check(!(await exists('.wordsexp')), 'fin de partie : « Masquer » ne referme pas les explications');
+    await page.setViewportSize({ width: 390, height: 844 });
+  });
+
   await scenario('boutique (pont simulé) : sélection offerte, thèmes verrouillés, essai par pub, réserve, packs, illimité', async () => {
     check(!(await exists('.reserve')), 'hors application, la boutique ne doit pas apparaître');
     const main = page;
@@ -1049,7 +1169,7 @@ async function nativeBridge(browser, url) {
       window.__calls = calls;
       const prices = { premium: '5,99 €' };
       for (const id of ['pack_quotidien', 'pack_culture', 'pack_loisirs', 'pack_esprit']) prices[id] = '1,99 €';
-      for (const id of ['pack_soiree', 'pack_coquin', 'pack_politique', 'pack_foot']) prices[id] = '0,99 €';
+      for (const id of ['pack_soiree', 'pack_coquin', 'pack_politique', 'pack_foot', 'pack_tech']) prices[id] = '0,99 €';
       const shop = { owned: [], ad: 'earned', prices };
       window.__shop = shop;
       const info = () => JSON.stringify({ ads: true, billing: true, owned: shop.owned, prices: shop.prices, privacy: true, test: true });
@@ -1076,14 +1196,16 @@ async function nativeBridge(browser, url) {
       await tap(act('do-abandon')); await settle();
     };
     const playOne = async () => { await gotoTab('home'); await tap(act('quick-game')); await settle(); };
-    const TOTAL = 24;
+    const TOTAL = 26;
+    let FREE = 0;
     try {
       await page.goto(url);
       await wait(800);
       // premier lancement : aucun joueur, des parties offertes, rien de publicitaire
       check((await db()).profiles.length === 0, 'des joueurs existent dès le premier lancement');
       check((await text('.reserve b')).trim() === '3', 'la réserve de départ n’est pas affichée');
-      check((await text('.foot')).includes('150 paires offertes'), 'l’accueil n’annonce pas la sélection offerte');
+      FREE = await page.evaluate(async () => (await import('/js/words/index.js')).DISCOVERY_PAIRS.length);
+      check(FREE >= 120 && (await text('.foot')).includes(`${FREE} paires offertes`), 'l’accueil n’annonce pas la sélection offerte');
       check((await calls()).length === 0, 'la pub est préparée dès le premier lancement');
       await shot('60-accueil-reserve');
       await gotoTab('players');
@@ -1095,7 +1217,7 @@ async function nativeBridge(browser, url) {
       check((await setup()).levels.join() === '1,2', 'le niveau Corsé doit être décoché par défaut');
       check(!(await exists('[data-act="set-level"]')), 'les niveaux sont proposés alors qu’aucun thème n’est débloqué');
       check(await exists('.rowbtn.teaser'), 'rien n’invite à débloquer les thèmes');
-      check((await page.evaluate(async () => (await import('/js/state.js')).poolInfo(window.__dj.S.setup).total)) === 150, 'la sélection offerte ne fait pas 150 paires');
+      check((await page.evaluate(async () => (await import('/js/state.js')).poolInfo(window.__dj.S.setup).total)) === FREE, 'les réglages sans achat ne jouent pas toute la sélection offerte');
       await shot('61-reglages-gratuit');
       // tous les thèmes sont visibles, verrouillés
       await tap(act('open-cats')); await wait(350);
@@ -1194,7 +1316,7 @@ async function nativeBridge(browser, url) {
       await abandon();
       // tout est ouvert et coché d'office, la sélection découverte disparaît, boutique à jour
       await toOptions(3);
-      check((await page.evaluate(() => ['objets', 'soiree', 'coquin', 'politique', 'foot', 'elec'].every((c) => window.__dj.S.setup.cats.includes(c)))), 'les thèmes débloqués par l’illimité ne sont pas cochés d’office');
+      check((await page.evaluate(() => ['objets', 'marques', 'redflags', 'soiree', 'coquin', 'politique', 'foot', 'elec'].every((c) => window.__dj.S.setup.cats.includes(c)))), 'les thèmes débloqués par l’illimité ne sont pas cochés d’office');
       check(!(await setup()).cats.includes('decouverte'), 'la sélection découverte reste cochée alors que tout est ouvert');
       await tap(act('open-cats')); await wait(350);
       check((await locked()) === 0 && !(await exists('[data-id="decouverte"]')), 'en illimité, il reste des thèmes verrouillés ou la sélection découverte');
@@ -1203,7 +1325,7 @@ async function nativeBridge(browser, url) {
       await tap(act('back')); await settle();
       await gotoTab('settings');
       await tap(act('go', '[data-to="shop"]')); await settle();
-      check((await page.locator('.screen:not(.leave) .owned').count()) >= 9, 'la boutique ne montre pas les achats débloqués');
+      check((await page.locator('.screen:not(.leave) .owned').count()) >= 10, 'la boutique ne montre pas les achats débloqués');
       await shot('66-boutique');
       await tap(act('shop-privacy'));
       await tap(act('shop-restore')); await wait(200);
