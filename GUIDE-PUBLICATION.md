@@ -12,9 +12,12 @@ Version concernée : **3.1.0** (identifiant `io.github.adamlahlou05.doublejeu`).
 | Page de confidentialité rédigée | La mettre en ligne (étape 2) |
 | Code et historique sur GitHub | Test fermé : 12 testeurs pendant 14 jours (étape 8) |
 
+**Ce qui est vérifié** : 44 tests de règles, 12 scénarios joués dans un navigateur avec une boutique simulée,
+et l'APK installé et lancé automatiquement sur un émulateur Android 14 (accueil, règles, bouton retour,
+onglet Joueurs, redémarrage, aucun plantage). Cet émulateur n'a pas les services Google.
+
 **Ce qui n'a pas pu être vérifié de mon côté** : les pubs, le consentement et les paiements n'ont jamais
-tourné sur un vrai téléphone. Le code compile, les règles sont testées (44 tests de règles, 12 scénarios
-joués dans un navigateur avec une boutique simulée), mais le premier essai réel, c'est toi (étapes 1 et 8).
+tourné sur un vrai téléphone, ni l'appareil photo. Le premier essai réel, c'est toi (étapes 1 et 8).
 
 ## Comment l'appli gagne de l'argent
 
