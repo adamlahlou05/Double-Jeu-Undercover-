@@ -72,8 +72,9 @@ Idéal pour un apéro, une soirée entre amis, un repas de famille ou un trajet.
 | Icône | `store/icone-512.png` |
 | Image de présentation | `store/banniere-1024x500.png` |
 | Captures téléphone | `store/capture-1.png` à `capture-7.png` (1080 × 1920) |
-| Site web | l'adresse de ton site (étape 1 du guide) |
-| Politique de confidentialité | la même adresse, suivie de `/confidentialite.html` |
+| Site web | `https://adamlahlou05.github.io` |
+| Politique de confidentialité | `https://adamlahlou05.github.io/confidentialite.html` |
+| E-mail de contact | `adamlahlouconsole@gmail.com` |
 
 ## Mots visés par la fiche
 

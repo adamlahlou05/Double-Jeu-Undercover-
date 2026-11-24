@@ -1,14 +1,14 @@
 # Publier Double Jeu sur le Play Store : pas à pas
 
-Version concernée : **3.2.0** (identifiant `io.github.adamlahlou05.doublejeu`). Guide mis à jour le 24 novembre 2026.
+Version concernée : **3.2.1** (identifiant `io.github.adamlahlou05.doublejeu`). Guide mis à jour le 24 novembre 2026.
 
 ## Où tu en es
 
 | Fait | À faire |
 |---|---|
 | Compte Play Console validé | Créer l'appli dans la Play Console (étape 5) |
-| Compte AdMob créé, en cours de validation | Ajouter l'appli et le bloc d'annonces dans AdMob (étape 1) |
-| AAB signé, visuels, textes, page de confidentialité : prêts | Lancer le test fermé au plus vite (étape 7) |
+| Compte AdMob créé, appli et bloc d'annonces ajoutés (étape 1) | Mettre le site en ligne (étape 3), publier le message de consentement (étape 4) |
+| AAB 3.2.1 signé avec tes identifiants AdMob, site rempli, visuels et textes prêts | Lancer le test fermé au plus vite (étape 7) |
 
 ## Peut-on éviter les 14 jours de test ? Non
 
@@ -34,22 +34,24 @@ Ce qui fait vraiment gagner du temps : **démarrer le test fermé dès aujourd'h
 Mon estimation : **3 à 5 semaines** entre aujourd'hui et l'appli visible par tout le monde. Les intitulés des
 menus cités plus bas peuvent varier légèrement dans les consoles.
 
-## Ce que tu dois m'envoyer
+## Identifiants et adresses du projet
 
-Trois choses, dès que tu as fait l'étape 1 :
+| Élément | Valeur |
+|---|---|
+| ID de l'application AdMob | `ca-app-pub-4875281043048804~3535803676` |
+| ID du bloc d'annonces avec récompense | `ca-app-pub-4875281043048804/4655519046` |
+| Référence éditeur AdMob (dans `app-ads.txt`) | `pub-4875281043048804` |
+| E-mail de contact | `adamlahlouconsole@gmail.com` |
+| Site web | `https://adamlahlou05.github.io` |
+| Politique de confidentialité | `https://adamlahlou05.github.io/confidentialite.html` |
 
-1. L'**ID de l'application** AdMob : `ca-app-pub-…~…`
-2. L'**ID du bloc d'annonces** avec récompense : `ca-app-pub-…/…`
-3. L'**adresse e-mail de contact** à afficher sur la page de confidentialité et sur la fiche
-
-Ces identifiants ne sont pas secrets. Avec eux, je te renvoie l'AAB définitif (3.2.1) et les trois fichiers du
-site déjà remplis.
+Les identifiants AdMob sont dans l'appli depuis la version 3.2.1 (`android/monetization.properties`).
 
 ---
 
-## 1. AdMob : ajouter l'appli et le bloc d'annonces (10 minutes)
+## 1. AdMob : ajouter l'appli et le bloc d'annonces (fait le 24 novembre)
 
-Tu peux le faire tout de suite, même si le compte affiche « en cours de validation ».
+Étape faite. Elle reste décrite ici pour mémoire.
 
 Sur [admob.google.com](https://admob.google.com) :
 
@@ -66,8 +68,6 @@ pour l'un, « Blocs d'annonces » pour l'autre) :
 
 - ID de l'application : `ca-app-pub-XXXXXXXXXXXXXXXX~YYYYYYYYYY` (avec un tilde)
 - ID du bloc d'annonces : `ca-app-pub-XXXXXXXXXXXXXXXX/ZZZZZZZZZZ` (avec une barre)
-
-Envoie-les-moi avec ton e-mail de contact.
 
 Aide Google : [configurer une appli](https://support.google.com/admob/answer/9989980?hl=fr),
 [créer un bloc avec récompense](https://support.google.com/admob/answer/7311747?hl=fr).
@@ -86,7 +86,8 @@ Google exige une adresse publique pour la politique de confidentialité. AdMob c
 `app-ads.txt` à la racine de ce site.
 
 1. Sur GitHub, crée un dépôt **public** nommé exactement `adamlahlou05.github.io`.
-2. Dépose dedans les trois fichiers que je te renvoie : `index.html`, `confidentialite.html`, `app-ads.txt`.
+2. Dépose dedans les trois fichiers du dossier `store/site/` : `index.html`, `confidentialite.html`, `app-ads.txt`
+   (déjà remplis avec ton e-mail et ta référence éditeur).
 3. Réglages du dépôt, « Pages » : source = branche `main`, dossier racine.
 4. Vérifie que ces deux adresses s'ouvrent :
    - `https://adamlahlou05.github.io/confidentialite.html`
@@ -177,7 +178,7 @@ C'est l'étape qui déclenche le compte à rebours : fais-la le plus tôt possib
 2. Onglet **Pays/Régions** : ajoute au moins la France.
 3. Onglet **Testeurs** : crée une liste d'e-mails avec les adresses **Gmail** de tes testeurs.
    Il en faut 12 ; **vise 15 à 20**, car un testeur qui se désinscrit ne compte plus.
-4. **Créer une release** : importe l'AAB.
+4. **Créer une release** : importe `double-jeu-3.2.1.aab`.
    - Accepte **la signature d'application par Google Play** (choix par défaut). Ta clé `.jks` devient la « clé
      d'importation » : il la faudra pour chaque mise à jour.
    - Notes de version : celles de `store/fiche-play-store.md`.
@@ -198,9 +199,6 @@ Règles du compte à rebours :
 - Garde une trace de leurs retours (un groupe WhatsApp suffit) : Google te demandera de les résumer.
 - N'achète pas de « testeurs » sur Internet : Google demande des personnes réelles qui utilisent l'appli, et
   le questionnaire final porte justement là-dessus.
-
-Tu peux importer dès maintenant `double-jeu-3.2.0.aab` (pubs de test) pour démarrer le compte à rebours, puis
-envoyer la 3.2.1 avec tes vrais identifiants sur la même piste dès que je te la renvoie.
 
 Conséquence pour tes amis : la version du Play Store n'a pas la même signature que l'APK installé à la main.
 Ils doivent exporter leur sauvegarde (Réglages, Exporter), désinstaller, installer depuis le Play Store, puis importer.
@@ -301,9 +299,8 @@ prolonger le test, garde les mêmes testeurs inscrits et refais la demande.
 
 | Fichier | Rôle |
 |---|---|
-| `double-jeu-3.2.0.aab` | Version actuelle, avec des pubs **de test**. Peut servir à démarrer le test fermé. |
-| `double-jeu-3.2.1.aab` | Version définitive avec tes identifiants AdMob : je la fabrique dès que tu me les envoies. |
-| `double-jeu-3.2.0.apk` | Pour essayer sur ton téléphone, sans passer par le Play Store. |
+| `double-jeu-3.2.1.aab` | Version à envoyer au Play Store, avec tes identifiants AdMob (vraies publicités). |
+| `double-jeu-3.2.0.apk` | Ancienne version à pubs de test, pour essayer sans passer par le Play Store. |
 | `double-jeu-release.jks` + son mot de passe | Clé de signature (déjà reçue). À garder précieusement, hors du dépôt. |
 | `store/icone-512.png`, `store/banniere-1024x500.png`, `store/capture-1..7.png` | Visuels de la fiche. |
 | `store/fiche-play-store.md` | Titre, descriptions et champs à copier. |

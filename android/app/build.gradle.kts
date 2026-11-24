@@ -32,8 +32,8 @@ android {
         applicationId = "io.github.adamlahlou05.doublejeu"
         minSdk = 26
         targetSdk = 36
-        versionCode = 30200
-        versionName = "3.2.0"
+        versionCode = 30201
+        versionName = "3.2.1"
 
         manifestPlaceholders["admobAppId"] = admobAppId
         buildConfigField("String", "ADMOB_REWARDED_ID", "\"$admobRewardedId\"")

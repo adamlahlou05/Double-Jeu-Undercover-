@@ -7,7 +7,7 @@ import * as E from './engine.js';
 import { norm } from './text.js';
 import { shopActive, themeOpen } from './shop.js';
 
-export const APP_VERSION = '3.2.0';
+export const APP_VERSION = '3.2.1';
 export const TIMER_CHOICES = [0, 60, 120, 180, 300];
 
 export const DB = loadDb();

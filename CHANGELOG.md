@@ -1,5 +1,10 @@
 # Journal des versions
 
+## 3.2.1
+
+- Identifiants AdMob du compte de l'éditeur : l'application affiche de vraies publicités (plus de publicités de test).
+- Site : adresse de contact et fichier `app-ads.txt` renseignés.
+
 ## 3.2.0
 
 ### Explications des mots
